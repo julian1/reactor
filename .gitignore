@@ -1,0 +1,8 @@
+*.o
+*.exe
+*.swp
+*.swo
+*.swn
+*.swm
+*.a
+*.out
