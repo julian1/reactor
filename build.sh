@@ -1,8 +1,8 @@
 #!/bin/bash -x
 
-gcc -Wall -c dispatcher.c -I./ -o dispatcher.o
+rm dispatcher.o examples/*.out
 
-rm examples/*.out
+gcc -Wall -c dispatcher.c -I./ -o dispatcher.o
 
 for i in examples/*.c; do
   gcc -Wall $i dispatcher.o -I./ -o "${i%.c}.out"
