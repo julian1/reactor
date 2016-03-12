@@ -27,7 +27,8 @@ struct Event
 typedef enum {
     LOG_DEBUG,
     LOG_INFO,
-    LOG_WARNING
+    LOG_WARNING,
+    LOG_NONE
 } Dispatcher_log_level;
 
 
