@@ -26,7 +26,6 @@ DEMUX/REACTOR FEATURES
 TODO
   - signals (outside the core dispatcher using fifo)
 
-  - move tests into examples...
 
   - change name to reactor or demux? or separate demux and handler dispatch?
 
@@ -48,15 +47,16 @@ TODO
       - dns
       - socket bind/listen
 
-  - enable cancel_all to be called in handlers while processing a cancel_all 
+  - enable cancel_all to be called in handlers while processing a cancel_all
       - which will make it easy to do a cancel/shutdown from any callback
 
 DONE
+  - done - move tests into examples...
   - done - control over debug stream
   - done - pure timers not associated with fd (outside core dispatcher if can? ).
-  - eg. read stdin -> write to /dev/ttyUSB0, read /dev/ttyUSB write stdout,
-  - done timer  / timeouts
-  - done cancel all, and call all callbacks
+    - eg. read stdin -> write to /dev/ttyUSB0, read /dev/ttyUSB write stdout,
+  - done - timer  / timeouts
+  - done - cancel all, and call all callbacks
   - done - write handler
 
 NOTES
