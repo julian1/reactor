@@ -205,10 +205,10 @@ int dispatcher_run_once(Dispatcher *d)
 
     int max_fd = 0;
 
-    // load up sets
+    // load up select() watch sets
     for(Handler *h = d->current; h; h = h->next) {
 
-        // only add real fds...
+        // only real fds...
         if(h->fd >= 0) {
 
             // we always want to know about exceptions
@@ -228,7 +228,7 @@ int dispatcher_run_once(Dispatcher *d)
         }
     }
 
-    // problem if fd appears in two sets at the same time?...
+    // issue if fd appears in two sets at the same time?...
 
     // TODO could compute iterate the handler list and compute the smallest expected
     // timeout value, and use it for the next select timeout
@@ -350,12 +350,12 @@ int dispatcher_run_once(Dispatcher *d)
         }
 
         // do we have more handlers to process?
-        int handler_still_to_process = handler_count(d->current);
-        if(handler_still_to_process == 0) {
+        int count = handler_count(d->current);
+        if(count == 0) {
             dispatcher_log(d, LOG_INFO, "no more handlers to process");
         }
 
-        return handler_still_to_process;
+        return count;
     }
     assert(0);
 }
