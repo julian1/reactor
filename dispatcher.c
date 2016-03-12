@@ -40,7 +40,7 @@ struct Handler
 typedef struct Dispatcher Dispatcher;
 struct Dispatcher
 {
-    FILE    *logger; // change name
+    FILE    *logout; // change name
 
     Handler *current;
 };
@@ -59,7 +59,7 @@ Dispatcher * dispatcher_create()
 {
     Dispatcher *d = malloc(sizeof(Dispatcher));
     memset(d, 0, sizeof(Dispatcher));
-    d->logger = stdout;
+    d->logout = stdout;
     return d;
 }
 
@@ -126,28 +126,23 @@ static int handler_count(Handler *l)
 }
 
 
-static void mylog(Dispatcher *d, /* int level */ const char *format, ... )
+
+static void dispatcher_log(Dispatcher *d, /* int level */ const char *format, ...)
 {
-// void log(FILE *file, const char* format, ... )
-// {
   va_list args;
   va_start (args, format);
-
-  fprintf(stdout, "logger - ");
-  // fprintf(d->logger, "%s: ", getTimestamp());
-  vfprintf (d->logger, format, args);
+  fprintf(stdout, "logout - ");
+  // fprintf(d->logout, "%s: ", getTimestamp());
+  vfprintf (d->logout, format, args);
   va_end (args);
-// }
-//    fprintf(d->logger, format );
-  fprintf(d->logger, "\n");
-  fflush(d->logger);
+  fprintf(d->logout, "\n");
+  fflush(d->logout);
 }
 
 
 void dispatcher_cancel_all(Dispatcher *d)
 {
-    mylog(d, "cancel all");
-    // fprintf(stdout, "cancel all");
+    dispatcher_log(d, "cancel all");
 
     for(Handler *h = d->current; h; h = h->next) {
         Event e;
@@ -178,11 +173,9 @@ void dispatcher_cancel_all(Dispatcher *d)
 
 int dispatcher_dispatch(Dispatcher *d)
 {
-    // change name to run_once()?
-    // load up the select set from the handlers
+    // TODO: maybe change name to run_once()?
 
-//    fprintf( stdout, "---------------\n");
-//    fprintf( stdout, " - current: %d\n", handler_count(d->current));
+    dispatcher_log(d, " - current handlers: %d\n", handler_count(d->current));
 
     // r, w, e
     fd_set rs, ws, es;
@@ -222,14 +215,14 @@ int dispatcher_dispatch(Dispatcher *d)
 
     int ret = select(max_fd + 1, &rs, &ws, &es, &timeout);
     if(ret < 0) {
-      fprintf(stdout, "error %s", strerror(errno));
-      exit(0);
+        dispatcher_log(d, "fatal %s", strerror(errno));
+        exit(0);
     }
     else {
         int now = time(NULL);
         // 0 (timeout) or more resouces affected
         // a resource is ready
-        //fprintf(stdout, "number or resources ready =%d\n", ret);
+        // dispatcher_log(d, "number or resources ready =%d\n", ret);
 
         Handler *unchanged = NULL;
         Handler *processed = NULL;
@@ -249,7 +242,7 @@ int dispatcher_dispatch(Dispatcher *d)
 
             if(h->fd >= 0 && FD_ISSET(h->fd, &es)) {
                 // test exception conditions first
-                fprintf(stdout, "exception on fd %d\n", h->fd);
+                dispatcher_log(d, "fd %d exception", h->fd);
                 e.type = EXCEPTION;
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
@@ -263,8 +256,7 @@ int dispatcher_dispatch(Dispatcher *d)
                 processed = h;
             }
             else if(h->fd >= 0 && FD_ISSET(h->fd, &rs) && h->read_callback) {
-                //fprintf(stdout, "fd %d is ready for reading\n", h->fd);
-                mylog(d, "fd %d is ready for reading", h->fd);
+                dispatcher_log(d, "fd %d is ready for reading", h->fd);
                 e.type = OK;
                 h->read_callback(h->context, &e);
                 // transfer handler to processed list
@@ -272,7 +264,7 @@ int dispatcher_dispatch(Dispatcher *d)
                 processed = h;
             }
             else if(h->fd >= 0 && FD_ISSET(h->fd, &ws) && h->write_callback) {
-                mylog(d, "fd %d is ready for writing", h->fd);
+                dispatcher_log(d, "fd %d is ready for writing", h->fd);
                 e.type = OK;
                 h->write_callback(h->context, &e);
                 // transfer handler to processed list
@@ -280,8 +272,7 @@ int dispatcher_dispatch(Dispatcher *d)
                 processed = h;
             }
             else if(h->timeout > 0 && now >= h->start_time + h->timeout) {
-                //mylog(d, "fd %d timed out", h->fd);
-                // fprintf(stdout, "fd %d timed out\n", h->fd);
+                dispatcher_log(d, "fd %d timed out", h->fd);
                 e.type = TIMEOUT;
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
@@ -301,9 +292,9 @@ int dispatcher_dispatch(Dispatcher *d)
         }
 
         //
-        //fprintf( stdout, " - processed: %d\n", handler_count(processed));
-        //fprintf( stdout, " - unchanged: %d\n", handler_count(unchanged));
-        //fprintf( stdout, " - new: %d\n", handler_count(d->current));
+        dispatcher_log(d, "processed: %d", handler_count(processed));
+        dispatcher_log(d, "unchanged: %d", handler_count(unchanged));
+        dispatcher_log(d, "new: %d", handler_count(d->current));
 
         // free resources for the processed list
         for(Handler *h = processed; h; h = next) {
