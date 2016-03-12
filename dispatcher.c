@@ -55,7 +55,6 @@ void dispatcher_init(Dispatcher *d)
 */
 
 
-
 Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
 {
     Dispatcher *d = malloc(sizeof(Dispatcher));
@@ -70,7 +69,7 @@ Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
 
 Dispatcher *dispatcher_create()
 {
-    return dispatcher_create_with_log_level(LOG_NONE);
+    return dispatcher_create_with_log_level(LOG_INFO);
 }
 
 
@@ -92,7 +91,7 @@ void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *forma
 
         // fprintf(d->logout, "%s: ", getTimestamp());
         const char *s_level = NULL;
-        switch(d->log_level) { 
+        switch(level) { 
           case LOG_WARNING: s_level = "WARNING"; break;
           case LOG_INFO:    s_level = "INFO"; break;
           case LOG_DEBUG:   s_level = "DEBUG"; break;
