@@ -2,12 +2,11 @@
     handling signals
     - signals are hard. they may lag due to fifo queuing, and this presents
       synchronisation issues with handler invocation, cancelling, and rebinding, as well
-      as timeouts. Also if deregister and re-register then we may miss an interupt altogether
+      as timeouts. Also if deregister and re-register we may miss an interupt altogether
     - to keep things manageable, we separate registration from callback handling
       actually it's symetrical with sockets in that dispatcher doens't do read/write
     - which enables us to keep timeouts for signals
 */
-
 
 #include <stdio.h>
 #include <assert.h>

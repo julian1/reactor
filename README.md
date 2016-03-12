@@ -27,6 +27,7 @@
 
   - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
   - use gettimeofday instead of time for millisec prec.
+  - signal deregistration
   - compute lowest possible timeout value (eg. next possible timeout ) as select sleep time
     - Currently, timer resolution is low - order of 100ms - designed for basic network operations only
   - investage issue when using serial-comm and the double \n\n
