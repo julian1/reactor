@@ -3,15 +3,17 @@ A micro reactor/demultiplexor event framework for linux over p/select()
 
 
 Refs proactor versus reactor
-http://www.artima.com/articles/io_design_patterns2.html
-  - Reactor
-    - dmux and dispatch to handler on read or write readiness
-    - dmux dispatching always syncronous
-  - Proactor
-    - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
-    - strands...
+  - http://www.artima.com/articles/io_design_patterns2.html
+    - Reactor
+      - dmux and dispatch to handler on read or write readiness
+      - dmux dispatching always syncronous
+    - Proactor
+      - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
+      - strands...
 
   - For the most part a proactor can be built around a reactor
+
+  - http://gngrwzrd.com/libgwrl/pod.html
 
 
 FEATURES
