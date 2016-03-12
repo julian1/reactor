@@ -69,12 +69,11 @@ Dispatcher *dispatcher_create()
 
 void dispatcher_destroy(Dispatcher *d)
 {
-    // should traverse the handlers?
     dispatcher_log(d, LOG_INFO, "destroy");
 
     if(d->current) {
-        dispatcher_log(d, LOG_FATAL, "cannot destroy with unprocessed handlers (use cancel_all() instead)");
-        assert(0);
+        dispatcher_log(d, LOG_FATAL, "destroy() called with unprocessed handlers - use cancel_all() instead");
+        exit(EXIT_FAILURE);
     }
     memset(d, 0, sizeof(Dispatcher));
     free(d);
@@ -241,8 +240,8 @@ int dispatcher_run_once(Dispatcher *d)
     int ret = select(max_fd + 1, &rs, &ws, &es, &timeout);
     if(ret < 0) {
         dispatcher_log(d, LOG_FATAL, "fatal %s", strerror(errno));
-        // TODO attempt cleanup by calling cancel??
-        exit(0);
+        // TODO attempt to cleanup by calling cancel??
+        exit(EXIT_FAILURE);
     }
     else {
         int now = time(NULL);
