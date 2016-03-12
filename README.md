@@ -1,5 +1,5 @@
 
-A nano reactor / demultiplexor event framework over p/select()
+A micro reactor/demultiplexor event framework for linux over p/select()
 
 
 Refs proactor versus reactor
@@ -13,13 +13,19 @@ http://www.artima.com/articles/io_design_patterns2.html
 
   - For the most part a proactor can be built around a reactor
 
+
+FEATURES
+  - socket, file descriptor, read/ready
+  - timers
+  - TODO signal support
+  - timer resolution is low - order of 100ms and designed to support basic network operations
+
+
 TODO
   - move tests into examples...
 
-  - control over debug stream
 
   - signals (outside the core dispatcher using fifo) 
-  - done - pure timers not associated with fd (outside core dispatcher if can? ).
 
   - change name dispatcher to demux? or separate demux and handler dispatch?
 
@@ -45,6 +51,8 @@ TODO
 
 
 DONE
+  - done - control over debug stream
+  - done - pure timers not associated with fd (outside core dispatcher if can? ).
   - eg. read stdin -> write to /dev/ttyUSB0, read /dev/ttyUSB write stdout,
   - done timer  / timeouts
   - done cancel all, and call all callbacks 
