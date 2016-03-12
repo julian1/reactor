@@ -126,7 +126,7 @@ static int handler_count(Handler *l)
 
 
 
-static void dispatcher_log(Dispatcher *d, /* int level */ const char *format, ...)
+void dispatcher_log(Dispatcher *d, Log_level level, const char *format, ...)
 {
   va_list args;
   va_start (args, format);
@@ -141,7 +141,7 @@ static void dispatcher_log(Dispatcher *d, /* int level */ const char *format, ..
 
 void dispatcher_cancel_all(Dispatcher *d)
 {
-    dispatcher_log(d, "cancel all");
+    dispatcher_log(d, LOG_INFO, "cancel all");
 
     for(Handler *h = d->current; h; h = h->next) {
         Event e;
@@ -174,7 +174,7 @@ int dispatcher_dispatch(Dispatcher *d)
 {
     // TODO: maybe change name to run_once()?
 
-    dispatcher_log(d, "current handlers: %d\n", handler_count(d->current));
+    dispatcher_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
 
     // r, w, e
     fd_set rs, ws, es;
@@ -214,7 +214,7 @@ int dispatcher_dispatch(Dispatcher *d)
 
     int ret = select(max_fd + 1, &rs, &ws, &es, &timeout);
     if(ret < 0) {
-        dispatcher_log(d, "fatal %s", strerror(errno));
+        dispatcher_log(d, LOG_INFO, "fatal %s", strerror(errno));
         exit(0);
     }
     else {
@@ -242,7 +242,7 @@ int dispatcher_dispatch(Dispatcher *d)
             if(h->fd >= 0 && FD_ISSET(h->fd, &es)) {
 
                 // test exception conditions first
-                dispatcher_log(d, "fd %d exception", h->fd);
+                dispatcher_log(d, LOG_INFO, "fd %d exception", h->fd);
                 e.type = EXCEPTION;
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
@@ -257,7 +257,7 @@ int dispatcher_dispatch(Dispatcher *d)
             }
             else if(h->fd >= 0 && h->read_callback && FD_ISSET(h->fd, &rs)) {
 
-                dispatcher_log(d, "fd %d is ready for reading", h->fd);
+                dispatcher_log(d, LOG_DEBUG, "fd %d is ready for reading", h->fd);
                 e.type = OK;
                 h->read_callback(h->context, &e);
                 // transfer handler to processed list
@@ -266,7 +266,7 @@ int dispatcher_dispatch(Dispatcher *d)
             }
             else if(h->fd >= 0 && h->write_callback && FD_ISSET(h->fd, &ws)) {
 
-                dispatcher_log(d, "fd %d is ready for writing", h->fd);
+                dispatcher_log(d, LOG_DEBUG, "fd %d is ready for writing", h->fd);
                 e.type = OK;
                 h->write_callback(h->context, &e);
                 // transfer handler to processed list
@@ -275,7 +275,7 @@ int dispatcher_dispatch(Dispatcher *d)
             }
             else if(h->timeout > 0 && now >= h->start_time + h->timeout) {
 
-                dispatcher_log(d, "fd %d timed out", h->fd);
+                dispatcher_log(d, LOG_DEBUG, "fd %d timed out", h->fd);
                 e.type = TIMEOUT;
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
@@ -295,9 +295,9 @@ int dispatcher_dispatch(Dispatcher *d)
         }
 
         //
-        dispatcher_log(d, "processed: %d", handler_count(processed));
-        dispatcher_log(d, "unchanged: %d", handler_count(unchanged));
-        dispatcher_log(d, "new: %d", handler_count(d->current));
+        dispatcher_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
+        dispatcher_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
+        dispatcher_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
 
         // free resources for the processed list
         for(Handler *h = processed; h; h = next) {

@@ -2,7 +2,8 @@
 typedef struct Dispatcher Dispatcher;
 
 
-// change to D_OK etc or DEMUX_OK, DMUX_EXCEPTION etc or use enum? .
+
+// change name Dispatcher_event_type
 
 typedef enum {
     OK,
@@ -21,6 +22,16 @@ struct Event
     // void        *user_state;
 };
 
+
+// change name Dispatcher_log_level
+
+typedef enum {
+    LOG_DEBUG,
+    LOG_INFO
+} Log_level;
+
+
+
 /*
 #define OK          1
 #define EXCEPTION   2
@@ -36,9 +47,11 @@ Dispatcher * dispatcher_create();
 
 void dispatcher_destroy(Dispatcher *);
 
-// move this outside ...
+void dispatcher_log(Dispatcher *d, Log_level level, const char *format, ...);
+
 void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, pcallback callback);
 
+// TODO - do we want timeouts for signals?
 void dispatcher_on_signal(Dispatcher *d, /*int timeout,*/ void *context, pcallback callback);
 
 void dispatcher_on_read_ready( Dispatcher *d, int fd, int timeout, void *context, pcallback callback);
