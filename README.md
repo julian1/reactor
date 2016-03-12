@@ -1,11 +1,23 @@
 
-A lightweight proactor event framework over p/select()
+A nano reactor / demultiplexor event framework over p/select()
 
-Rather than actually doing read and write, we dispatch that we can do the action...
+
+Refs proactor versus reactor
+http://www.artima.com/articles/io_design_patterns2.html
+  - Reactor
+    - dispatch to handler on read or write readiness
+    - dispatching always syncronous
+  - Proactor
+    - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
+    - strands...
+
+  - For the most part a proactor can be built around a reactor
 
 TODO
   - signals (outside the core dispatcher using fifo) 
-  - pure timers not associated with fd (outside core dispatcher if can? ).
+  - done - pure timers not associated with fd (outside core dispatcher if can? ).
+
+  - change name dispatcher to demux? or separate demux and handler dispatch?
 
   - use gettimeofday instead of time for millisec prec. 
 
