@@ -38,7 +38,7 @@ struct Handler
 typedef struct Dispatcher Dispatcher;
 struct Dispatcher
 {
-    FILE    *logout; // change name
+    FILE    *logout;
 
     Dispatcher_log_level log_level;
 
@@ -49,7 +49,6 @@ struct Dispatcher
 void dispatcher_init(Dispatcher *d)
 {
     // not sure if should allocate since may want to use stack
-    // Dispatcher *d = (Dispatcher *)malloc(sizeof(Dispatcher));
     memset(d, 0, sizeof(Dispatcher));
 }
 */
@@ -60,7 +59,7 @@ Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
     Dispatcher *d = malloc(sizeof(Dispatcher));
     memset(d, 0, sizeof(Dispatcher));
     d->logout = stdout;
-    d->log_level = level; 
+    d->log_level = level;
 
     dispatcher_log(d, LOG_INFO, "create");
     return d;
@@ -91,12 +90,12 @@ void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *forma
 
         // fprintf(d->logout, "%s: ", getTimestamp());
         const char *s_level = NULL;
-        switch(level) { 
+        switch(level) {
           case LOG_WARNING: s_level = "WARNING"; break;
           case LOG_INFO:    s_level = "INFO"; break;
           case LOG_DEBUG:   s_level = "DEBUG"; break;
           default: assert(0);
-        }; 
+        };
         fprintf(d->logout, "%s: ", s_level);
         vfprintf(d->logout, format, args);
         va_end (args);
