@@ -12,7 +12,6 @@
 
 #include <dispatcher.h>
 
-#define NULL ((void *)0)
 
 
 static void event_init(Event *e)
@@ -74,7 +73,7 @@ void dispatcher_destroy(Dispatcher *d)
 }
 
 
-static Handler * create_handler(Dispatcher *d, int fd, int timeout, void *context)
+static Handler * dispatcher_create_handler(Dispatcher *d, int fd, int timeout, void *context)
 {
     // change name from do to bind?
     Handler *h = (Handler *)malloc(sizeof(Handler));
@@ -97,7 +96,7 @@ static Handler * create_handler(Dispatcher *d, int fd, int timeout, void *contex
 
 void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, pcallback callback)
 {
-    Handler *h = create_handler( d, -1234, timeout, context);
+    Handler *h = dispatcher_create_handler( d, -1234, timeout, context);
     // appropriate the the read_callback????
     h->read_callback = callback;
 }
@@ -105,14 +104,14 @@ void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, pcallback ca
 
 void dispatcher_on_read_ready(Dispatcher *d, int fd, int timeout, void *context, pcallback callback)
 {
-    Handler *h = create_handler( d, fd, timeout, context);
+    Handler *h = dispatcher_create_handler( d, fd, timeout, context);
     h->read_callback = callback;
 }
 
 
 void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, pcallback callback)
 {
-    Handler *h = create_handler( d, fd, timeout, context);
+    Handler *h = dispatcher_create_handler( d, fd, timeout, context);
     h->write_callback = callback;
 }
 

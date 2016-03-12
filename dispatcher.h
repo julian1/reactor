@@ -1,22 +1,34 @@
 
 typedef struct Dispatcher Dispatcher;
 
+
+// change to D_OK etc or DEMUX_OK, DMUX_EXCEPTION etc or use enum? .
+
+typedef enum {
+    OK,
+    EXCEPTION,
+    TIMEOUT,
+    CANCELLED,
+} Event_type;
+
+
 typedef struct Event Event;
 struct Event
 {
-    int         type;
-    Dispatcher  *dispatcher;    
+    Event_type   type;
+    Dispatcher  *dispatcher;
     int         fd;
     // void        *user_state;
 };
 
-// change to D_OK etc.
+/*
 #define OK          1
 #define EXCEPTION   2
 #define TIMEOUT     3
 #define CANCELLED   4
+*/
 
-// ugghhh we have to expose it... to create it... 
+// ugghhh we have to expose it... to create it...
 
 typedef void (*pcallback)(void *context, Event *);
 
