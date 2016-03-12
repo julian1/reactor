@@ -189,7 +189,13 @@ void dispatcher_cancel_all(Dispatcher *d)
 }
 
 
-int dispatcher_dispatch(Dispatcher *d)
+void dispatcher_run(Dispatcher *d)
+{
+    while(dispatcher_run_once(d));
+}
+
+
+int dispatcher_run_once(Dispatcher *d)
 {
     // TODO: maybe change name to run_once()?
 
@@ -313,7 +319,7 @@ int dispatcher_dispatch(Dispatcher *d)
             }
         }
 
-        //
+        // TODO log the specific descriptors as well...
         dispatcher_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
         dispatcher_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
         dispatcher_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
@@ -325,7 +331,7 @@ int dispatcher_dispatch(Dispatcher *d)
             free(h);
         }
 
-        // combine unchanged and new lists
+        // concatenate the unchanged and new lists
         if(d->current) {
             // new handlers were created in callbacks
             // so go to end of new
@@ -341,8 +347,12 @@ int dispatcher_dispatch(Dispatcher *d)
         }
 
         // more handlers to process?
-        // return d->current != NULL; 
-        return handler_count(d->current);
+        int handler_still_to_process = handler_count(d->current);
+        if(handler_still_to_process == 0) {
+            dispatcher_log(d, LOG_INFO, "no more handlers to process");
+        }
+
+        return handler_still_to_process;
     }
 }
 

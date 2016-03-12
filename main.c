@@ -78,7 +78,7 @@ int main()
     dispatcher_read(d,"main.c"); 
     // dispatcher_read(&d,"main.c"); 
 
-    while(dispatcher_dispatch(d));
+    while(dispatcher_run_once(d));
 
 /*
     fd = open("/dev/random", O_RDWR);

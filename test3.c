@@ -105,7 +105,7 @@ int main()
     dispatcher_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
     dispatcher_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
     // dispatcher_cancel_all(d);
-    while(dispatcher_dispatch(d));
+    while(dispatcher_run_once(d));
     dispatcher_destroy(d);
     return 0;
 /**/

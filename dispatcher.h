@@ -46,7 +46,9 @@ void dispatcher_on_read_ready( Dispatcher *d, int fd, int timeout, void *context
 
 void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback);
 
-int dispatcher_dispatch(Dispatcher *d);
+int dispatcher_run_once(Dispatcher *d);
+
+void dispatcher_run(Dispatcher *d);
 
 void dispatcher_cancel_all(Dispatcher *d);
 

@@ -48,7 +48,7 @@ int main()
   Dispatcher *d = dispatcher_create();
   dispatcher_on_read_ready(d, 0, 5, NULL, (void *)on_read_ready);
   // dispatcher_cancel_all(d);
-  while(dispatcher_dispatch(d));
+  while(dispatcher_run_once(d));
   dispatcher_destroy(d);
   return 0;
 }
