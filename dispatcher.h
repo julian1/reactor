@@ -1,10 +1,6 @@
 
 typedef struct Dispatcher Dispatcher;
 
-
-
-// change name Dispatcher_event_type
-
 typedef enum {
     OK,
     EXCEPTION,
@@ -19,10 +15,9 @@ struct Event
     Dispatcher_event_type   type;
     Dispatcher  *dispatcher;
     int         fd;
-    // void        *user_state;
 };
 
-// TODO better prefixes...
+// TODO better prefixes for enum values...
 
 typedef enum {
     LOG_DEBUG,
@@ -31,8 +26,6 @@ typedef enum {
     LOG_NONE
 } Dispatcher_log_level;
 
-
-// ugghhh we have to expose it... to create it...
 
 typedef void (*Dispatcher_callback)(void *context, Event *);
 
