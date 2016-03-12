@@ -73,7 +73,7 @@ void dispatcher_destroy(Dispatcher *d)
     dispatcher_log(d, LOG_INFO, "destroy");
 
     if(d->current) {
-        dispatcher_log(d, LOG_FATAL, "destroy called with outstanding handlers (perhaps use cancel_all() instead)");
+        dispatcher_log(d, LOG_FATAL, "cannot destroy with unprocessed handlers (use cancel_all() instead)");
         assert(0);
     }
     memset(d, 0, sizeof(Dispatcher));
