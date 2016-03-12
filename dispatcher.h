@@ -37,6 +37,8 @@ typedef void (*Dispatcher_callback)(void *context, Event *);
 
 Dispatcher * dispatcher_create();
 
+Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level);
+
 void dispatcher_destroy(Dispatcher *);
 
 void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *format, ...);

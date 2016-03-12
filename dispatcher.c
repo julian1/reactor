@@ -57,10 +57,18 @@ void dispatcher_init(Dispatcher *d)
 
 Dispatcher *dispatcher_create()
 {
+    return dispatcher_create_with_log_level(LOG_INFO);
+}
+
+
+Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
+{
     Dispatcher *d = malloc(sizeof(Dispatcher));
     memset(d, 0, sizeof(Dispatcher));
     d->logout = stdout;
-    d->log_level = LOG_INFO; 
+    d->log_level = level; 
+
+    dispatcher_log(d, LOG_INFO, "create");
     return d;
 }
 
@@ -69,7 +77,6 @@ void dispatcher_destroy(Dispatcher *d)
 {
     // should traverse the handlers?
     dispatcher_log(d, LOG_INFO, "destroy");
-
     assert(!d->current);
     memset(d, 0, sizeof(Dispatcher));
     free(d);
