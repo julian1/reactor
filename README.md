@@ -5,8 +5,8 @@ A micro reactor/demultiplexor event framework for linux over p/select()
 Refs proactor versus reactor
 http://www.artima.com/articles/io_design_patterns2.html
   - Reactor
-    - dispatch to handler on read or write readiness
-    - dispatching always syncronous
+    - dmux and dispatch to handler on read or write readiness
+    - dmux dispatching always syncronous
   - Proactor
     - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
     - strands...
@@ -15,15 +15,14 @@ http://www.artima.com/articles/io_design_patterns2.html
 
 
 FEATURES
-  - socket, file descriptor, read/ready
-  - timers
+  - binding a context into the callback
+  - socket, file descriptor, read/ready, timers
   - TODO signal support
-  - timer resolution is low - order of 100ms and designed to support basic network operations
+  - Note timer resolution is low - order of 100ms and designed to support basic network operations
 
 
 TODO
   - move tests into examples...
-
 
   - signals (outside the core dispatcher using fifo) 
 
@@ -38,10 +37,11 @@ TODO
 
   - do we still want to block
 
-  - investigate - for sockets number bytes in buffer yet to transmit.
+  - investigate - ioctl for sockets to discover number bytes in buffer yet to transmit. like boost asio
 
-  - simple serial comms 
+  - example simple serial comms 
       - ioctl tty_ioctl set baud, rts, dtr
+
   - signals and registration
   - dns
   - socket bind/listen
