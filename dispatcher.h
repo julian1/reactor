@@ -41,7 +41,7 @@ typedef enum {
 
 // ugghhh we have to expose it... to create it...
 
-typedef void (*pcallback)(void *context, Event *);
+typedef void (*Dispatcher_callback)(void *context, Event *);
 
 Dispatcher * dispatcher_create();
 
@@ -49,14 +49,14 @@ void dispatcher_destroy(Dispatcher *);
 
 void dispatcher_log(Dispatcher *d, Log_level level, const char *format, ...);
 
-void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, pcallback callback);
+void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback);
 
 // TODO - do we want timeouts for signals?
-void dispatcher_on_signal(Dispatcher *d, /*int timeout,*/ void *context, pcallback callback);
+void dispatcher_on_signal(Dispatcher *d, /*int timeout,*/ void *context, Dispatcher_callback callback);
 
-void dispatcher_on_read_ready( Dispatcher *d, int fd, int timeout, void *context, pcallback callback);
+void dispatcher_on_read_ready( Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback);
 
-void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, pcallback callback);
+void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback);
 
 int dispatcher_dispatch(Dispatcher *d);
 

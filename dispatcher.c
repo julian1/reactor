@@ -94,7 +94,7 @@ static Handler * dispatcher_create_handler(Dispatcher *d, int fd, int timeout, v
 }
 
 
-void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, pcallback callback)
+void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback)
 {
     Handler *h = dispatcher_create_handler( d, -1234, timeout, context);
     // appropriate the the read_callback????
@@ -102,14 +102,14 @@ void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, pcallback ca
 }
 
 
-void dispatcher_on_read_ready(Dispatcher *d, int fd, int timeout, void *context, pcallback callback)
+void dispatcher_on_read_ready(Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback)
 {
     Handler *h = dispatcher_create_handler( d, fd, timeout, context);
     h->read_callback = callback;
 }
 
 
-void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, pcallback callback)
+void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback)
 {
     Handler *h = dispatcher_create_handler( d, fd, timeout, context);
     h->write_callback = callback;
