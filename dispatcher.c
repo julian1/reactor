@@ -71,7 +71,11 @@ void dispatcher_destroy(Dispatcher *d)
 {
     // should traverse the handlers?
     dispatcher_log(d, LOG_INFO, "destroy");
-    assert(!d->current);
+
+    if(d->current) {
+        dispatcher_log(d, LOG_FATAL, "destroy called with outstanding handlers (perhaps use cancel_all() instead)");
+        assert(0);
+    }
     memset(d, 0, sizeof(Dispatcher));
     free(d);
 }
