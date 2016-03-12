@@ -14,8 +14,8 @@ struct Event
 {
     Dispatcher_event_type   type;
     Dispatcher  *dispatcher;
-    int         fd;       // if socket,stdin,file,device etc
-    int         signal;   // if signal
+    int         fd;       // for socket,stdin,file,device etc
+    int         signal;   // for signals
 };
 
 // TODO better prefixes for enum values...
@@ -59,6 +59,8 @@ void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context
 
 // signal stuff
 void dispatcher_register_signal(Dispatcher *d, int signal);
+
+void dispatcher_deregister_signal(Dispatcher *d, int signal);
 
 void dispatcher_on_signal(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback);
 

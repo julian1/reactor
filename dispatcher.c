@@ -83,9 +83,17 @@ void dispatcher_destroy(Dispatcher *d)
     dispatcher_log(d, LOG_INFO, "destroy");
 
     if(d->current) {
-        dispatcher_log(d, LOG_FATAL, "destroy() called with unprocessed handlers - use cancel_all() instead");
+        dispatcher_log(
+            d, 
+            LOG_FATAL, 
+            "destroy() called with unprocessed handlers - use cancel_all() instead"
+        );
         exit(EXIT_FAILURE);
     }
+
+    close(d->signal_fifo_readfd);
+    close(signal_fifo_writefd);
+
     memset(d, 0, sizeof(Dispatcher));
     free(d);
 }
@@ -422,7 +430,7 @@ void dispatcher_register_signal( Dispatcher *d, int signal )
 }
 
 
-void dispatcher_ignore_signal( Dispatcher *d, int signal )
+void dispatcher_deregister_signal( Dispatcher *d, int signal )
 {
     // TODO
     assert(0);
@@ -438,7 +446,7 @@ struct SignalContext
 };
 
 
-static void dispatcher_on_signal_fifo_read_ready(SignalContext *wc, Event *e)
+static void dispatcher_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
 {
     switch(e->type) {
         case OK: {
@@ -448,41 +456,48 @@ static void dispatcher_on_signal_fifo_read_ready(SignalContext *wc, Event *e)
                 // call the inner function
                 // fill in the signal number for event and call the callback
                 e->signal = s.signal;
-                (wc->callback)(wc->context, e); 
+                (sc->callback)(sc->context, e); 
             } else {
                 // something went wrong...
                 assert(0);
             }
             break;
         }
-        // no need to close the fifo fd since there's only one...
-        // just pass the event along
         case EXCEPTION:
+            // handle locally, instead of passing along...
+            dispatcher_log(
+                e->dispatcher, 
+                LOG_FATAL, 
+                "exception on signal fifo, error %s", 
+                strerror(errno)
+            );
+            exit(EXIT_FAILURE);
+            break;
         case TIMEOUT:
         case CANCELLED:
-            (wc->callback)(wc->context, e); 
+            (sc->callback)(sc->context, e); 
             break;
         default:
             assert(0);
     }
 
-    memset(wc, 0, sizeof(SignalContext));
-    free(wc);
+    memset(sc, 0, sizeof(SignalContext));
+    free(sc);
 }
 
 
 void dispatcher_on_signal(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback)
 {
-    SignalContext *wc = malloc(sizeof(SignalContext));
-    memset(wc, 0, sizeof(SignalContext));
-    // wc->signal = signal;
-    wc->context = context;
-    wc->callback = callback;
+    SignalContext *sc = malloc(sizeof(SignalContext));
+    memset(sc, 0, sizeof(SignalContext));
+    // sc->signal = signal;
+    sc->context = context;
+    sc->callback = callback;
     dispatcher_on_read_ready(
         d, 
         d->signal_fifo_readfd, 
         timeout, 
-        wc, 
+        sc, 
         (void (*)(void *, Event *))dispatcher_on_signal_fifo_read_ready
     );
 }

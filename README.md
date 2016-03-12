@@ -25,7 +25,6 @@
 
 #### TODO
 
-  - signals (outside the core dispatcher using fifo)
   - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
   - use gettimeofday instead of time for millisec prec.
   - compute lowest possible timeout value (eg. next possible timeout ) as select sleep time
@@ -41,9 +40,11 @@
     - socket bind/listen
   - enable cancel_all to be called in handlers while processing a cancel_all
     - WHich will make it easy to do a cancel/shutdown from any callback
+  - better enum variable prefixes
 
 #### DONE
 
+  - done - signals using fifo (maybe outside the core dispatcher) 
   - done - move tests into examples...
   - done - control over debug stream
   - done - pure timers not associated with fd (outside core dispatcher if can? ).
