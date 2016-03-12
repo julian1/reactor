@@ -24,12 +24,9 @@ struct Handler
 {
     Handler *next;
     int     fd;
-
     int     timeout;    // secs
     int     start_time; // secs
-
     void    *context;
-
     void    (*read_callback)(void *context, Event *);
     void    (*write_callback)(void *context, Event *);
 };
@@ -39,9 +36,7 @@ typedef struct Dispatcher Dispatcher;
 struct Dispatcher
 {
     FILE    *logout;
-
     Dispatcher_log_level log_level;
-
     Handler *current;
 };
 
@@ -91,9 +86,10 @@ void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *forma
         // fprintf(d->logout, "%s: ", getTimestamp());
         const char *s_level = NULL;
         switch(level) {
-          case LOG_WARNING: s_level = "WARNING"; break;
-          case LOG_INFO:    s_level = "INFO"; break;
           case LOG_DEBUG:   s_level = "DEBUG"; break;
+          case LOG_INFO:    s_level = "INFO"; break;
+          case LOG_WARN:    s_level = "WARN"; break;
+          case LOG_FATAL:   s_level = "FATAL"; break;
           default: assert(0);
         };
         fprintf(d->logout, "%s: ", s_level);
@@ -240,7 +236,7 @@ int dispatcher_run_once(Dispatcher *d)
 
     int ret = select(max_fd + 1, &rs, &ws, &es, &timeout);
     if(ret < 0) {
-        dispatcher_log(d, LOG_WARNING, "fatal %s", strerror(errno));
+        dispatcher_log(d, LOG_FATAL, "fatal %s", strerror(errno));
         // TODO attempt cleanup by calling cancel??
         exit(0);
     }

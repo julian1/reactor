@@ -19,10 +19,13 @@ struct Event
 
 // TODO better prefixes for enum values...
 
+// ALL < DEBUG < INFO < WARN < ERROR < FATAL < OFF.
+
 typedef enum {
     LOG_DEBUG,
     LOG_INFO,
-    LOG_WARNING,
+    LOG_WARN,
+    LOG_FATAL,
     LOG_NONE
 } Dispatcher_log_level;
 
