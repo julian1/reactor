@@ -2,32 +2,32 @@
 A micro reactor/demultiplexor event framework for linux over p/select()
 
 
-Refs proactor versus reactor
-  - http://www.artima.com/articles/io_design_patterns2.html
-    - Reactor
-      - dmux and dispatch to handler on read or write readiness
-      - dmux dispatching always syncronous
-    - Proactor
-      - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
-      - strands...
-
-  - For the most part a proactor can be built around a reactor
-
-  - http://gngrwzrd.com/libgwrl/pod.html
-
-
-DEMUX/REACTOR FEATURES
+EVENT DEMUX/REACTOR FEATURES
   - dmux of timers, sockets, stdin/stdout, serial, signal events etc
-  - allows a context to be bound into the callback handler
-  - supports clean cancel/shutdown semantics to call all handlers and allow resource cleanup
+  - supports a user created context to be passed into the callback handler
+  - clean cancel/terminate semantics to enable easy cleanup all resources
   - Note timer resolution is low - order of 100ms and designed to support basic network operations
+
+
+NOTES
+  Refs proactor versus reactor
+    - http://www.artima.com/articles/io_design_patterns2.html
+      - Reactor
+        - dmux and dispatch to handler on read or write readiness
+        - dmux dispatching always syncronous
+      - Proactor
+        - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
+        - strands...
+
+    - For the most part a proactor can be built around a reactor
+
+    - http://gngrwzrd.com/libgwrl/pod.html
 
 
 TODO
   - signals (outside the core dispatcher using fifo)
 
-
-  - change name to reactor or demux? or separate demux and handler dispatch?
+  - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
 
   - use gettimeofday instead of time for millisec prec.
 
