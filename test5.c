@@ -7,16 +7,16 @@
 
 static void on_timeout_1(void *context, Event *e)
 {
-    fprintf(stdout, "timeout_1");
+    fprintf(stdout, "timeout_1\n");
     fflush(stdout);
 } 
+
 
 static void on_timeout_2(void *context, Event *e)
 {
-    fprintf(stdout, "timeout_2");
+    fprintf(stdout, "timeout_2\n");
     fflush(stdout);
 } 
-
 
 
 int main()

@@ -14,6 +14,8 @@ http://www.artima.com/articles/io_design_patterns2.html
   - For the most part a proactor can be built around a reactor
 
 TODO
+  - move tests into examples...
+
   - control over debug stream
 
   - signals (outside the core dispatcher using fifo) 

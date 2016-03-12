@@ -13,7 +13,6 @@
 #include <dispatcher.h>
 
 
-
 static void event_init(Event *e)
 {
     memset(e, 0, sizeof(Event));
@@ -41,6 +40,8 @@ struct Dispatcher
 {
     FILE    *logout; // change name
 
+    Dispatcher_log_level log_level;
+
     Handler *current;
 };
 
@@ -54,11 +55,12 @@ void dispatcher_init(Dispatcher *d)
 */
 
 
-Dispatcher * dispatcher_create()
+Dispatcher *dispatcher_create()
 {
     Dispatcher *d = malloc(sizeof(Dispatcher));
     memset(d, 0, sizeof(Dispatcher));
     d->logout = stdout;
+    d->log_level = LOG_INFO; 
     return d;
 }
 
@@ -66,10 +68,34 @@ Dispatcher * dispatcher_create()
 void dispatcher_destroy(Dispatcher *d)
 {
     // should traverse the handlers?
-    assert(!d->current);
+    dispatcher_log(d, LOG_INFO, "destroy");
 
+    assert(!d->current);
     memset(d, 0, sizeof(Dispatcher));
     free(d);
+}
+
+
+void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *format, ...)
+{
+    if(level >= d->log_level) {
+        va_list args;
+        va_start (args, format);
+
+        // fprintf(d->logout, "%s: ", getTimestamp());
+        const char *s_level = NULL;
+        switch(d->log_level) { 
+          case LOG_WARNING: s_level = "WARNING"; break;
+          case LOG_INFO:    s_level = "INFO"; break;
+          case LOG_DEBUG:   s_level = "DEBUG"; break;
+          default: assert(0);
+        }; 
+        fprintf(d->logout, "%s: ", s_level);
+        vfprintf(d->logout, format, args);
+        va_end (args);
+        fprintf(d->logout, "\n");
+        fflush(d->logout);
+    }
 }
 
 
@@ -122,20 +148,6 @@ static int handler_count(Handler *l)
     for(Handler *h = l; h; h = h->next)
         ++n;
     return n;
-}
-
-
-
-void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *format, ...)
-{
-  va_list args;
-  va_start (args, format);
-  fprintf(stdout, "logout - ");
-  // fprintf(d->logout, "%s: ", getTimestamp());
-  vfprintf (d->logout, format, args);
-  va_end (args);
-  fprintf(d->logout, "\n");
-  fflush(d->logout);
 }
 
 

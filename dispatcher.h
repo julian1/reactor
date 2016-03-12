@@ -22,22 +22,14 @@ struct Event
     // void        *user_state;
 };
 
-
-// change name Dispatcher_log_level
+// TODO better prefixes...
 
 typedef enum {
     LOG_DEBUG,
-    LOG_INFO
+    LOG_INFO,
+    LOG_WARNING
 } Dispatcher_log_level;
 
-
-
-/*
-#define OK          1
-#define EXCEPTION   2
-#define TIMEOUT     3
-#define CANCELLED   4
-*/
 
 // ugghhh we have to expose it... to create it...
 
@@ -61,4 +53,5 @@ void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context
 int dispatcher_dispatch(Dispatcher *d);
 
 void dispatcher_cancel_all(Dispatcher *d);
+
 
