@@ -126,7 +126,7 @@ static int handler_count(Handler *l)
 
 
 
-void dispatcher_log(Dispatcher *d, Log_level level, const char *format, ...)
+void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *format, ...)
 {
   va_list args;
   va_start (args, format);

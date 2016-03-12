@@ -10,13 +10,13 @@ typedef enum {
     EXCEPTION,
     TIMEOUT,
     CANCELLED,
-} Event_type;
+} Dispatcher_event_type;
 
 
 typedef struct Event Event;
 struct Event
 {
-    Event_type   type;
+    Dispatcher_event_type   type;
     Dispatcher  *dispatcher;
     int         fd;
     // void        *user_state;
@@ -28,7 +28,7 @@ struct Event
 typedef enum {
     LOG_DEBUG,
     LOG_INFO
-} Log_level;
+} Dispatcher_log_level;
 
 
 
@@ -47,7 +47,7 @@ Dispatcher * dispatcher_create();
 
 void dispatcher_destroy(Dispatcher *);
 
-void dispatcher_log(Dispatcher *d, Log_level level, const char *format, ...);
+void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *format, ...);
 
 void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback);
 
