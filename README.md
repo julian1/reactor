@@ -1,7 +1,7 @@
 
 #### DEMUX/REACTOR
 
-  A micro demultiplexor/reactor event framework for linux in C using p/select()
+  A micro demultiplexor/reactor event framework for linux in C
 
 #### FEATURES
 

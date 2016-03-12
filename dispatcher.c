@@ -10,6 +10,9 @@
 #include <time.h>
 #include <stdarg.h>
 
+//#include <linux/stat.h>
+#include <signal.h>
+
 #include <dispatcher.h>
 
 
@@ -22,31 +25,30 @@ static void event_init(Event *e)
 typedef struct Handler Handler;
 struct Handler
 {
-    Handler *next;
-    int     fd;
-    int     timeout;    // secs
-    int     start_time; // secs
-    void    *context;
-    void    (*read_callback)(void *context, Event *);
-    void    (*write_callback)(void *context, Event *);
+    Handler     *next;
+    int         fd;
+    int         timeout;    // secs
+    int         start_time; // secs
+    void        *context;
+    void        (*read_callback)(void *context, Event *);
+    void        (*write_callback)(void *context, Event *);
 };
 
 
 typedef struct Dispatcher Dispatcher;
 struct Dispatcher
 {
-    FILE    *logout;
+    FILE        *logout;
     Dispatcher_log_level log_level;
-    Handler *current;
+    Handler     *current;
+    int         signal_fifo_readfd;
 };
 
-/*
-void dispatcher_init(Dispatcher *d)
-{
-    // not sure if should allocate since may want to use stack
-    memset(d, 0, sizeof(Dispatcher));
-}
-*/
+
+
+// Uggh, must be static as neither sa_handler or sa_sigaction support context
+// Means can only instatntiate one dispatcher
+static int signal_fifo_writefd;
 
 
 Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
@@ -55,8 +57,17 @@ Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
     memset(d, 0, sizeof(Dispatcher));
     d->logout = stdout;
     d->log_level = level;
-
     dispatcher_log(d, LOG_INFO, "create");
+
+    // set up signal fifo 
+    int fd[2];
+    if(pipe(fd) < 0) {
+        dispatcher_log(d, LOG_FATAL, "could not create fifo pipe %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    d->signal_fifo_readfd = fd[0];
+    signal_fifo_writefd = fd[1];
+
     return d;
 }
 
@@ -86,7 +97,7 @@ void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *forma
         va_list args;
         va_start (args, format);
 
-        // fprintf(d->logout, "%s: ", getTimestamp());
+        // fprintf(d->logout, "%s: ", getTimexceptfdstamp());
         const char *s_level = NULL;
         switch(level) {
           case LOG_DEBUG:   s_level = "DEBUG"; break;
@@ -110,6 +121,7 @@ static Handler * dispatcher_create_handler(Dispatcher *d, int fd, int timeout, v
     Handler *h = (Handler *)malloc(sizeof(Handler));
     memset(h, 0, sizeof(Handler));
     h->fd = fd;
+    // we don't really need to record both, but s
     h->timeout = timeout;
     h->start_time = time(NULL);
     h->context = context;
@@ -198,10 +210,10 @@ int dispatcher_run_once(Dispatcher *d)
     dispatcher_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
 
     // r, w, e
-    fd_set rs, ws, es;
-    FD_ZERO(&rs);
-    FD_ZERO(&ws);
-    FD_ZERO(&es);
+    fd_set readfds, writefds, exceptfds;
+    FD_ZERO(&readfds);
+    FD_ZERO(&writefds);
+    FD_ZERO(&exceptfds);
 
     int max_fd = 0;
 
@@ -212,13 +224,13 @@ int dispatcher_run_once(Dispatcher *d)
         if(h->fd >= 0) {
 
             // we always want to know about exceptions
-            FD_SET(h->fd, &es);
+            FD_SET(h->fd, &exceptfds);
 
             if(h->read_callback) {
-                FD_SET(h->fd, &rs);
+                FD_SET(h->fd, &readfds);
             }
             else if(h->write_callback) {
-                FD_SET(h->fd, &ws);
+                FD_SET(h->fd, &writefds);
             } else {
                 assert(0);
             }
@@ -228,26 +240,34 @@ int dispatcher_run_once(Dispatcher *d)
         }
     }
 
-    // issue if fd appears in two sets at the same time?...
+    // issue if fd appeareadfds in two sets at the same time?...
 
-    // TODO could compute iterate the handler list and compute the smallest expected
+    // TODO could compute iterate the handler list and compute the smallexceptfdst expected
     // timeout value, and use it for the next select timeout
 
     struct timeval timeout;
-    timeout.tv_sec = 0;
+    timeout.tv_sec = 60;
     timeout.tv_usec = 300 * 1000;  // 300ms
 
-    int ret = select(max_fd + 1, &rs, &ws, &es, &timeout);
-    if(ret < 0) {
-        dispatcher_log(d, LOG_FATAL, "fatal %s", strerror(errno));
-        // TODO attempt to cleanup by calling cancel??
-        exit(EXIT_FAILURE);
+    if(select(max_fd + 1, &readfds, &writefds, &exceptfds, &timeout) < 0) {
+        if(errno == EINTR) {
+            // signal interupt 
+            // simply return to allow caller to rebind
+            // avoids needing to interpret/process exceptions rased in exceptfds
+            return handler_count(d->current);
+        } 
+        else {
+            dispatcher_log(d, LOG_FATAL, "fatal select() error %s", strerror(errno));
+            // TODO attempt cleanup by calling cancel??
+            exit(EXIT_FAILURE);
+        }
     }
     else {
+
         int now = time(NULL);
-        // 0 (timeout) or more resouces affected
+        // 0 (timeout) or more resource affected
         // a resource is ready
-        // dispatcher_log(d, "number or resources ready =%d\n", ret);
+        // dispatcher_log(d, "number or rexceptfdsourcexceptfds ready =%d\n", ret);
 
         Handler *unchanged = NULL;
         Handler *processed = NULL;
@@ -256,7 +276,7 @@ int dispatcher_run_once(Dispatcher *d)
         d->current = NULL;
         Handler *next = NULL;
 
-        // process the current by calling callbacks and putting on new lists
+        // procexceptfdss the current by calling callbacks and putting on new lists
         for(Handler *h = current; h; h = next) {
 
             next = h->next;
@@ -266,9 +286,9 @@ int dispatcher_run_once(Dispatcher *d)
             e.dispatcher = d;
             e.fd = h->fd;
 
-            if(h->fd >= 0 && FD_ISSET(h->fd, &es)) {
+            if(h->fd >= 0 && FD_ISSET(h->fd, &exceptfds)) {
 
-                // test exception conditions first
+                // texceptfdst exception conditions fireadfdst
                 dispatcher_log(d, LOG_INFO, "fd %d exception", h->fd);
                 e.type = EXCEPTION;
                 if(h->read_callback)
@@ -282,7 +302,7 @@ int dispatcher_run_once(Dispatcher *d)
                 h->next = processed;
                 processed = h;
             }
-            else if(h->fd >= 0 && h->read_callback && FD_ISSET(h->fd, &rs)) {
+            else if(h->fd >= 0 && h->read_callback && FD_ISSET(h->fd, &readfds)) {
 
                 dispatcher_log(d, LOG_DEBUG, "fd %d is ready for reading", h->fd);
                 e.type = OK;
@@ -291,7 +311,7 @@ int dispatcher_run_once(Dispatcher *d)
                 h->next = processed;
                 processed = h;
             }
-            else if(h->fd >= 0 && h->write_callback && FD_ISSET(h->fd, &ws)) {
+            else if(h->fd >= 0 && h->write_callback && FD_ISSET(h->fd, &writefds)) {
 
                 dispatcher_log(d, LOG_DEBUG, "fd %d is ready for writing", h->fd);
                 e.type = OK;
@@ -349,7 +369,7 @@ int dispatcher_run_once(Dispatcher *d)
             d->current = unchanged;
         }
 
-        // do we have more handlers to process?
+        // do we have more handlers to procexceptfdss?
         int count = handler_count(d->current);
         if(count == 0) {
             dispatcher_log(d, LOG_INFO, "no more handlers to process");
@@ -358,5 +378,112 @@ int dispatcher_run_once(Dispatcher *d)
         return count;
     }
     assert(0);
+}
+
+/////////////////////////
+
+/*
+    Signal/interupt handling
+    strategy is to push interupt details onto a unnamed fifo pipe, and then 
+    read them again in the desired handler/thread context   
+*/
+
+typedef struct SignalDetail SignalDetail;
+struct SignalDetail 
+{
+    int signal;
+};
+
+
+static void dispatcher_sigaction(int signal, siginfo_t *siginfo, ucontext_t *ucontext)
+{
+    // fprintf(stdout, "my_sa_sigaction -> got signal %d from pid %d\n", signal, siginfo->si_pid);
+    SignalDetail s;
+    s.signal = signal;
+    write(signal_fifo_writefd, &s, sizeof(SignalDetail));
+}
+
+
+void dispatcher_register_signal( Dispatcher *d, int signal )
+{
+    struct sigaction act;
+    memset(&act, 0, sizeof(sigaction));
+
+    // Use sa_sigaction over sa_handler for additional detail
+    // act.sa_handler = my_sa_handler;
+    act.sa_flags = SA_SIGINFO;
+    act.sa_sigaction = (void (*)(int, siginfo_t *, void *))dispatcher_sigaction;
+
+    int ret = sigaction(signal, &act, NULL);
+    if(ret != 0) {
+        dispatcher_log(d, LOG_FATAL, "sigaction() failed %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+void dispatcher_ignore_signal( Dispatcher *d, int signal )
+{
+    // TODO
+    assert(0);
+}
+
+
+typedef struct SignalContext SignalContext;
+struct SignalContext
+{
+    // int signal;
+    void *context;
+    Dispatcher_callback callback;
+};
+
+
+static void dispatcher_on_signal_fifo_read_ready(SignalContext *wc, Event *e)
+{
+    switch(e->type) {
+        case OK: {
+            SignalDetail s;
+            if(read(e->fd, &s, sizeof(SignalDetail)) == sizeof(SignalDetail))  {
+                // fprintf(stdout, "got signal %d\n", s.signal); 
+                // call the inner function
+                // fill in the signal number for event and call the callback
+                e->signal = s.signal;
+                (wc->callback)(wc->context, e); 
+            } else {
+                // something went wrong...
+                assert(0);
+            }
+            break;
+        }
+        // no need to close the fifo fd since there's only one...
+        // just pass the event along
+        case EXCEPTION:
+        case TIMEOUT:
+        case CANCELLED:
+            (wc->callback)(wc->context, e); 
+            break;
+        default:
+            assert(0);
+    }
+
+    memset(wc, 0, sizeof(SignalContext));
+    free(wc);
+}
+
+
+void dispatcher_on_signal(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback)
+{
+    SignalContext *wc = malloc(sizeof(SignalContext));
+    memset(wc, 0, sizeof(SignalContext));
+    // wc->signal = signal;
+    wc->context = context;
+    wc->callback = callback;
+    dispatcher_on_read_ready(
+        d, 
+        d->signal_fifo_readfd, 
+        timeout, 
+        wc, 
+        (void (*)(void *, Event *))dispatcher_on_signal_fifo_read_ready
+    );
 }
 

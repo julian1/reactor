@@ -28,7 +28,7 @@ static void on_read_ready(void *context, Event *e)
           fprintf(stdout, "oops unknown event");
           close(e->fd);
           break;
-  }
+    }
 }
 
 /*
