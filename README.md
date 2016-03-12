@@ -19,6 +19,7 @@ Refs proactor versus reactor
 FEATURES
   - binding a context into the callback
   - socket, file descriptor, read/ready, timers
+  - clean cancel/shutdown semantics to call all handlers and allow resource cleanup
   - TODO signal support
   - Note timer resolution is low - order of 100ms and designed to support basic network operations
 

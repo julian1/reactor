@@ -110,14 +110,10 @@ static Handler * dispatcher_create_handler(Dispatcher *d, int fd, int timeout, v
     // change name from do to bind?
     Handler *h = (Handler *)malloc(sizeof(Handler));
     memset(h, 0, sizeof(Handler));
-
     h->fd = fd;
-
     h->timeout = timeout;
     h->start_time = time(NULL);
-
     h->context = context;
-
     // tack onto the handler list
     h->next = d->current;
     d->current = h;
@@ -153,6 +149,7 @@ static int handler_count(Handler *l)
     int n = 0;
     for(Handler *h = l; h; h = h->next)
         ++n;
+
     return n;
 }
 
@@ -161,6 +158,7 @@ void dispatcher_cancel_all(Dispatcher *d)
 {
     dispatcher_log(d, LOG_INFO, "cancel all");
 
+    // call handlers with cancelled action
     for(Handler *h = d->current; h; h = h->next) {
         Event e;
         event_init(&e);
@@ -176,7 +174,7 @@ void dispatcher_cancel_all(Dispatcher *d)
           assert(0);
     }
 
-    // shouldn't actually need a separate loop
+    // cleanup - shouldn't really need a different loop...
     Handler *next = NULL;
     for(Handler *h = d->current; h; h = next) {
         next = h->next;
@@ -211,8 +209,9 @@ int dispatcher_run_once(Dispatcher *d)
     // load up sets
     for(Handler *h = d->current; h; h = h->next) {
 
-        // only real fds...
+        // only add real fds...
         if(h->fd >= 0) {
+
             // we always want to know about exceptions
             FD_SET(h->fd, &es);
 
@@ -232,13 +231,17 @@ int dispatcher_run_once(Dispatcher *d)
 
     // problem if fd appears in two sets at the same time?...
 
+    // TODO could compute iterate the handler list and compute the smallest expected
+    // timeout value, and use it for the next select timeout
+
     struct timeval timeout;
     timeout.tv_sec = 0;
     timeout.tv_usec = 300 * 1000;  // 300ms
 
     int ret = select(max_fd + 1, &rs, &ws, &es, &timeout);
     if(ret < 0) {
-        dispatcher_log(d, LOG_INFO, "fatal %s", strerror(errno));
+        dispatcher_log(d, LOG_WARNING, "fatal %s", strerror(errno));
+        // TODO attempt cleanup by calling cancel??
         exit(0);
     }
     else {
@@ -256,6 +259,7 @@ int dispatcher_run_once(Dispatcher *d)
 
         // process the current by calling callbacks and putting on new lists
         for(Handler *h = current; h; h = next) {
+
             next = h->next;
 
             Event e;
@@ -312,40 +316,41 @@ int dispatcher_run_once(Dispatcher *d)
                 processed = h;
             }
             else {
+
                 // nothing changed for handler - transfer handler to un-processed list
                 h->next = unchanged;
                 unchanged = h;
             }
         }
 
-        // TODO log the specific descriptors as well...
+        // TODO could also log the specific fds
         dispatcher_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
         dispatcher_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
         dispatcher_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
 
-        // free resources for the processed list
+        // free handler mem
         for(Handler *h = processed; h; h = next) {
             next = h->next;
             memset(h, 0, sizeof(Handler));
             free(h);
         }
 
-        // concatenate the unchanged and new lists
+        // concatenate the unchanged and new handler lists
         if(d->current) {
             // new handlers were created in callbacks
-            // so go to end of new
+            // so move to the end of the new list
             Handler *p = d->current;
             while(p && p->next)
                 p = p->next;
 
-            // and tack on unchanged
+            // and tack on the unchanged list
             p->next = unchanged;
         } else {
-            // no new handlers, so handlers left to process are whatever was unchanged
+            // no new handlers, so handlers are simply remaining unprocessed handlers
             d->current = unchanged;
         }
 
-        // more handlers to process?
+        // do we have more handlers to process?
         int handler_still_to_process = handler_count(d->current);
         if(handler_still_to_process == 0) {
             dispatcher_log(d, LOG_INFO, "no more handlers to process");
@@ -353,5 +358,6 @@ int dispatcher_run_once(Dispatcher *d)
 
         return handler_still_to_process;
     }
+    assert(0);
 }
 
