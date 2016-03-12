@@ -19,7 +19,7 @@ void signal_callback(void *context, Event *e)
     switch(e->type) {
       case OK:
           fprintf(stdout, "got signal %d\n", e->signal);
-          dispatcher_on_signal(e->dispatcher, -1, NULL, signal_callback);
+          dispatcher_on_signal(e->dispatcher, e->timeout, NULL, signal_callback);
           break;
       default:
           assert(0);

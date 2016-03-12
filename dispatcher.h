@@ -14,8 +14,9 @@ struct Event
 {
     Dispatcher_event_type   type;
     Dispatcher  *dispatcher;
-    int         fd;       // for socket,stdin,file,device etc
-    int         signal;   // for signals
+    int         timeout;    // associated with handler, not just timer, can make rebinding easier
+    int         fd;         // for socket,stdin,file,device etc
+    int         signal;     // for signals
 };
 
 // TODO better prefixes for enum values...

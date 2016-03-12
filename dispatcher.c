@@ -182,6 +182,7 @@ void dispatcher_cancel_all(Dispatcher *d)
         Event e;
         event_init(&e);
         e.dispatcher = d;
+        e.timeout = h->timeout;
         e.fd = h->fd;
         e.type = CANCELLED;
 
@@ -284,13 +285,14 @@ int dispatcher_run_once(Dispatcher *d)
         d->current = NULL;
         Handler *next = NULL;
 
-        // procexceptfdss the current by calling callbacks and putting on new lists
+        // process the current by calling callbacks and putting on new lists
         for(Handler *h = current; h; h = next) {
 
             next = h->next;
 
             Event e;
             event_init(&e);
+            e.timeout = h->timeout;
             e.dispatcher = d;
             e.fd = h->fd;
 
@@ -377,7 +379,7 @@ int dispatcher_run_once(Dispatcher *d)
             d->current = unchanged;
         }
 
-        // do we have more handlers to procexceptfdss?
+        // do we have more handlers to process?
         int count = handler_count(d->current);
         if(count == 0) {
             dispatcher_log(d, LOG_INFO, "no more handlers to process");
