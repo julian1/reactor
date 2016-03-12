@@ -175,7 +175,7 @@ int dispatcher_dispatch(Dispatcher *d)
 {
     // TODO: maybe change name to run_once()?
 
-    dispatcher_log(d, " - current handlers: %d\n", handler_count(d->current));
+    dispatcher_log(d, "current handlers: %d\n", handler_count(d->current));
 
     // r, w, e
     fd_set rs, ws, es;
@@ -241,6 +241,7 @@ int dispatcher_dispatch(Dispatcher *d)
             e.fd = h->fd;
 
             if(h->fd >= 0 && FD_ISSET(h->fd, &es)) {
+
                 // test exception conditions first
                 dispatcher_log(d, "fd %d exception", h->fd);
                 e.type = EXCEPTION;
@@ -255,7 +256,8 @@ int dispatcher_dispatch(Dispatcher *d)
                 h->next = processed;
                 processed = h;
             }
-            else if(h->fd >= 0 && FD_ISSET(h->fd, &rs) && h->read_callback) {
+            else if(h->fd >= 0 && h->read_callback && FD_ISSET(h->fd, &rs)) {
+
                 dispatcher_log(d, "fd %d is ready for reading", h->fd);
                 e.type = OK;
                 h->read_callback(h->context, &e);
@@ -263,7 +265,8 @@ int dispatcher_dispatch(Dispatcher *d)
                 h->next = processed;
                 processed = h;
             }
-            else if(h->fd >= 0 && FD_ISSET(h->fd, &ws) && h->write_callback) {
+            else if(h->fd >= 0 && h->write_callback && FD_ISSET(h->fd, &ws)) {
+
                 dispatcher_log(d, "fd %d is ready for writing", h->fd);
                 e.type = OK;
                 h->write_callback(h->context, &e);
@@ -272,6 +275,7 @@ int dispatcher_dispatch(Dispatcher *d)
                 processed = h;
             }
             else if(h->timeout > 0 && now >= h->start_time + h->timeout) {
+
                 dispatcher_log(d, "fd %d timed out", h->fd);
                 e.type = TIMEOUT;
                 if(h->read_callback)
