@@ -1,4 +1,7 @@
 
+/blog - task esp8266, and control registers. screen, minicom, miniterm that I use
+this led, to writing a demux . handling of signals.
+
 #### DEMUX/REACTOR
 
   A micro demultiplexor/reactor event framework for linux in C
@@ -26,6 +29,7 @@
 #### TODO
 
   - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
+  - investigate whether ok, to mix fopen(stdout) for logging with open(1)...
   - use gettimeofday instead of time for millisec prec.
   - signal deregistration
   - compute lowest possible timeout value (eg. next possible timeout ) as select sleep time
@@ -45,7 +49,7 @@
 
 #### DONE
 
-  - done - signals using fifo (maybe outside the core dispatcher) 
+  - done - signals using fifo (maybe outside the core dispatcher)
   - done - move tests into examples...
   - done - control over debug stream
   - done - pure timers not associated with fd (outside core dispatcher if can? ).
