@@ -1,32 +1,36 @@
 
-### REACTOR/DEMUX
+### REACTOR
 
-  An event reactor/demultiplexor micro-framework for Linux in C
+  A reactor/demultiplexer event handling micro-framework for Linux in C
 
 #### FEATURES
 
   - event demux for timers, signals, sockets, stdin/stdout, serial etc
-  - supports a user context to be passed to the callback handler
-  - synchronous handling of signal interupts
+  - supports application defined user contexts as part of the callback handler
+  - synchronous management of signal interupts
   - specify timeout for any io action
   - clean cancel/terminate semantics and to enable easy resource cleanup
-  - no attempt to abstract/hide ioctl()-like functionality 
+  - no hiding/abstracting ioctl(), tty_ioctl() etc
+  - no event queue, means simpler resource lifetime management
 
 #### NOTES
 
-  - Refs proactor versus reactor
-    - http://www.artima.com/articles/io_design_patterns2.html
-      - Reactor
-        - dmux and dispatch to handler on read or write readiness
-        - dmux dispatching always synchronous
-      - Proactor
-        - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
-        - strands, apartment thread contexts...
+  - https://en.wikipedia.org/wiki/Reactor_pattern
+  - Refs proactor versus reactor - http://www.artima.com/articles/io_design_patterns2.html
+    - Reactor
+      - dmux and dispatch to handler on read or write readiness
+      - dmux dispatching always synchronous
+    - Proactor
+      - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
+      - strands, apartments thread contexts...
   - For the most part a proactor can be built around a reactor
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
- 
+
+  - get bind, and test that can spawn new contexts easily
+  - rename Event to ReactorEvent or use reactor_event_t etc
+  - simultaneous read and write handler binding
   - maybe move signal fifo handling outside pure reactor
   - change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
