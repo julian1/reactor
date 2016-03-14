@@ -46,12 +46,12 @@ struct Reactor
 
 
 
-// Uggh, must be static as neither sa_handler or sa_sigaction support context
-// Means can only instatntiate one reactor
+// Uggh, must be static as neither sa_handler or sa_sigaction support contexts
+// Current limitation that can only have one reactor
 static int signal_fifo_writefd;
 
 
-Reactor *reactor_create_with_log_level(Reactor_log_level level)
+Reactor *reactor_create_with_log_level(/* FILE *logout, */ Reactor_log_level level)
 {
     Reactor *d = malloc(sizeof(Reactor));
     memset(d, 0, sizeof(Reactor));
@@ -108,10 +108,10 @@ void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
         // fprintf(d->logout, "%s: ", getTimexceptfdstamp());
         const char *s_level = NULL;
         switch(level) {
-          case LOG_DEBUG:   s_level = "DEBUG"; break;
-          case LOG_INFO:    s_level = "INFO"; break;
-          case LOG_WARN:    s_level = "WARN"; break;
-          case LOG_FATAL:   s_level = "FATAL"; break;
+          case LOG_DEBUG: s_level = "DEBUG"; break;
+          case LOG_INFO:  s_level = "INFO"; break;
+          case LOG_WARN:  s_level = "WARN"; break;
+          case LOG_FATAL: s_level = "FATAL"; break;
           default: assert(0);
         };
         fprintf(d->logout, "%s: ", s_level);
@@ -125,7 +125,6 @@ void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
 
 static Handler * reactor_create_handler(Reactor *d, int fd, int timeout, void *context)
 {
-    // change name from do to bind?
     Handler *h = (Handler *)malloc(sizeof(Handler));
     memset(h, 0, sizeof(Handler));
     h->fd = fd;
@@ -144,7 +143,7 @@ static Handler * reactor_create_handler(Reactor *d, int fd, int timeout, void *c
 void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback callback)
 {
     Handler *h = reactor_create_handler( d, -1234, timeout, context);
-    // appropriate the the read_callback????
+    // appropriate the read_callback.
     h->read_callback = callback;
 }
 
@@ -194,7 +193,7 @@ void reactor_cancel_all(Reactor *d)
           assert(0);
     }
 
-    // cleanup - shouldn't really need a different loop...
+    // cleanup - doesn't really need separate different loop...
     Handler *next = NULL;
     for(Handler *h = d->current; h; h = next) {
         next = h->next;
@@ -214,8 +213,6 @@ void reactor_run(Reactor *d)
 
 int reactor_run_once(Reactor *d)
 {
-    // TODO: maybe change name to run_once()?
-
     reactor_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
 
     // r, w, e
