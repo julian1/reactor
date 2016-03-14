@@ -1,10 +1,7 @@
 
-/blog - task esp8266, and control registers. screen, minicom, miniterm that I use
-this led, to writing a demux . handling of signals.
+#### REACTOR/DEMUX
 
-#### DEMUX/REACTOR
-
-  A micro demultiplexor/reactor event framework for linux in C
+  A micro reactor/demultiplexor event framework for linux in C
 
 #### FEATURES
 
@@ -71,6 +68,8 @@ this led, to writing a demux . handling of signals.
   - but may not want, instead set the sig mask once on startup when we create the dispatcher
 
   - signal, sighandler_t   - behavior varies across unix  - says use sigaction instead
-  -
 
+
+  - /blog - task esp8266, and control registers. screen, minicom, miniterm that I use
+  this led, to writing a demux . handling of signals.
 
