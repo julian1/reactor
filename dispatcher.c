@@ -255,7 +255,7 @@ int dispatcher_run_once(Dispatcher *d)
     // timeout value, and use it for the next select timeout
 
     struct timeval timeout;
-    timeout.tv_sec = 60;
+    timeout.tv_sec = 0; // 60
     timeout.tv_usec = 300 * 1000;  // 300ms
 
     if(select(max_fd + 1, &readfds, &writefds, &exceptfds, &timeout) < 0) {

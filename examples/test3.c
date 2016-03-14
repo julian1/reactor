@@ -7,6 +7,8 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 
+#include <stdbool.h> // c99
+
 #include <dispatcher.h>
 
 typedef struct Context Context;
@@ -79,6 +81,47 @@ void on_read_stdin(Context *context, Event *e)
 // it's buffering behavior not the blocking behavior
 
 
+
+// static bool pin;
+
+static void set_modem_pin(int device_fd, int flag, bool pin)
+{ 
+    int argp;
+    ioctl(device_fd, TIOCMGET, &argp);
+    if(ioctl(device_fd, TIOCMGET, &argp) < 0) {
+        // fatal...
+        assert(0);
+    } else {
+        if(pin) {
+            // pull high, led on, clear dtr bit
+            argp &= ~ flag ;
+            if(ioctl(device_fd, TIOCMSET, &argp) < 0) {
+                assert(0);
+            }
+        }
+        else {
+            // pull low, led off, set dtr bit
+            argp |= flag ;
+            if(ioctl(device_fd, TIOCMSET, &argp) < 0) {
+                assert(0);
+            }
+        }
+    }
+}
+
+static void on_timeout_1(Context *context, Event *e)
+{
+    // 
+    static bool led_state = 0;  // should move into context
+    led_state = !led_state;
+    fprintf(stdout, "led state %d\n", led_state);
+    set_modem_pin( context->device_fd, TIOCM_RTS, led_state);
+    dispatcher_on_timer(e->dispatcher, 1, context, (void *)on_timeout_1);
+} 
+
+
+
+
 /*
   Note that in case stdin is associated  with  a  terminal,
   This kernel input handling can be modified using calls like tcsetattr(3
@@ -102,8 +145,11 @@ int main()
 //    speed_t c_ospeed;
 
     Dispatcher *d = dispatcher_create();
-    dispatcher_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
-    dispatcher_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
+//    dispatcher_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
+//    dispatcher_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
+
+    dispatcher_on_timer(d, 1, &context, (void *)on_timeout_1);
+
     // dispatcher_cancel_all(d);
     while(dispatcher_run_once(d));
     dispatcher_destroy(d);
