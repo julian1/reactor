@@ -1,10 +1,10 @@
 #!/bin/bash -x
 
-rm dispatcher.o examples/*.out
+rm reactor.o examples/*.out
 
-gcc -Wall -c dispatcher.c -I./ -o dispatcher.o
+gcc -Wall -c reactor.c -I./ -o reactor.o
 
 for i in examples/*.c; do
-  gcc -Wall $i dispatcher.o -I./ -o "${i%.c}.out"
+  gcc -Wall $i reactor.o -I./ -o "${i%.c}.out"
 done
 

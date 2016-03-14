@@ -25,9 +25,8 @@
 
 #### TODO
 
-  - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
   - investigate whether ok, to mix fopen(stdout) for logging with open(1)...
-  - use gettimeofday instead of time for millisec prec.
+  - use gettimeofday() instead of time for millisec prec.
   - signal deregistration
   - compute lowest possible timeout value (eg. next possible timeout ) as select sleep time
     - Currently, timer resolution is low - order of 100ms - designed for basic network operations only
@@ -46,6 +45,7 @@
 
 #### DONE
 
+  - done - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
   - done - signals using fifo (maybe outside the core dispatcher)
   - done - move tests into examples...
   - done - control over debug stream

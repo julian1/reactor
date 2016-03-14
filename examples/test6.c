@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <dispatcher.h>
+#include <reactor.h>
 
 
 
@@ -31,7 +31,7 @@ void on_read_ready(Context *x, Event *e)
             fprintf(stdout, "OK got %d chars\n", n);
             if( n > 0)  {
                 // read more
-                dispatcher_on_read_ready(e->dispatcher, e->fd, -1, x, (void *)on_read_ready);
+                reactor_on_read_ready(e->reactor, e->fd, -1, x, (void *)on_read_ready);
             } else {
                 // finish up
                 close(e->fd);
@@ -52,7 +52,7 @@ void on_read_ready(Context *x, Event *e)
 
 // must be composible
 
-void dispatcher_read(Dispatcher *d, char *filename)
+void reactor_read(Reactor *d, char *filename)
 {
     // int fd = open("/dev/random", O_RDWR | O_NONBLOCK);
     int fd = open(filename, O_RDWR | O_NONBLOCK);
@@ -61,7 +61,7 @@ void dispatcher_read(Dispatcher *d, char *filename)
     } else {
         Context * context = malloc(sizeof(Context)); 
         memset(context, 0, sizeof(Context));
-        dispatcher_on_read_ready(d, fd, -1, context, (void *)on_read_ready);
+        reactor_on_read_ready(d, fd, -1, context, (void *)on_read_ready);
     }
 }
 
@@ -72,13 +72,13 @@ void dispatcher_read(Dispatcher *d, char *filename)
 
 int main()
 {
-    Dispatcher *d = dispatcher_create();
-    // dispatcher_init(&d);
+    Reactor *d = reactor_create();
+    // reactor_init(&d);
 
-    dispatcher_read(d,"main.c"); 
-    // dispatcher_read(&d,"main.c"); 
+    reactor_read(d,"main.c"); 
+    // reactor_read(&d,"main.c"); 
 
-    while(dispatcher_run_once(d));
+    while(reactor_run_once(d));
 
 /*
     fd = open("/dev/random", O_RDWR);

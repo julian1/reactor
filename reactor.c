@@ -13,7 +13,7 @@
 //#include <linux/stat.h>
 #include <signal.h>
 
-#include <dispatcher.h>
+#include <reactor.h>
 
 
 static void event_init(Event *e)
@@ -35,11 +35,11 @@ struct Handler
 };
 
 
-typedef struct Dispatcher Dispatcher;
-struct Dispatcher
+typedef struct Reactor Reactor;
+struct Reactor
 {
     FILE        *logout;
-    Dispatcher_log_level log_level;
+    Reactor_log_level log_level;
     Handler     *current;
     int         signal_fifo_readfd;
 };
@@ -47,22 +47,22 @@ struct Dispatcher
 
 
 // Uggh, must be static as neither sa_handler or sa_sigaction support context
-// Means can only instatntiate one dispatcher
+// Means can only instatntiate one reactor
 static int signal_fifo_writefd;
 
 
-Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
+Reactor *reactor_create_with_log_level(Reactor_log_level level)
 {
-    Dispatcher *d = malloc(sizeof(Dispatcher));
-    memset(d, 0, sizeof(Dispatcher));
+    Reactor *d = malloc(sizeof(Reactor));
+    memset(d, 0, sizeof(Reactor));
     d->logout = stdout;
     d->log_level = level;
-    dispatcher_log(d, LOG_INFO, "create");
+    reactor_log(d, LOG_INFO, "create");
 
     // set up signal fifo 
     int fd[2];
     if(pipe(fd) < 0) {
-        dispatcher_log(d, LOG_FATAL, "could not create fifo pipe %s", strerror(errno));
+        reactor_log(d, LOG_FATAL, "could not create fifo pipe %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
     d->signal_fifo_readfd = fd[0];
@@ -72,18 +72,18 @@ Dispatcher *dispatcher_create_with_log_level(Dispatcher_log_level level)
 }
 
 
-Dispatcher *dispatcher_create()
+Reactor *reactor_create()
 {
-    return dispatcher_create_with_log_level(LOG_INFO);
+    return reactor_create_with_log_level(LOG_INFO);
 }
 
 
-void dispatcher_destroy(Dispatcher *d)
+void reactor_destroy(Reactor *d)
 {
-    dispatcher_log(d, LOG_INFO, "destroy");
+    reactor_log(d, LOG_INFO, "destroy");
 
     if(d->current) {
-        dispatcher_log(
+        reactor_log(
             d, 
             LOG_FATAL, 
             "destroy() called with unprocessed handlers - use cancel_all() instead"
@@ -94,12 +94,12 @@ void dispatcher_destroy(Dispatcher *d)
     close(d->signal_fifo_readfd);
     close(signal_fifo_writefd);
 
-    memset(d, 0, sizeof(Dispatcher));
+    memset(d, 0, sizeof(Reactor));
     free(d);
 }
 
 
-void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *format, ...)
+void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
 {
     if(level >= d->log_level) {
         va_list args;
@@ -123,7 +123,7 @@ void dispatcher_log(Dispatcher *d, Dispatcher_log_level level, const char *forma
 }
 
 
-static Handler * dispatcher_create_handler(Dispatcher *d, int fd, int timeout, void *context)
+static Handler * reactor_create_handler(Reactor *d, int fd, int timeout, void *context)
 {
     // change name from do to bind?
     Handler *h = (Handler *)malloc(sizeof(Handler));
@@ -141,24 +141,24 @@ static Handler * dispatcher_create_handler(Dispatcher *d, int fd, int timeout, v
 }
 
 
-void dispatcher_on_timer(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback)
+void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback callback)
 {
-    Handler *h = dispatcher_create_handler( d, -1234, timeout, context);
+    Handler *h = reactor_create_handler( d, -1234, timeout, context);
     // appropriate the the read_callback????
     h->read_callback = callback;
 }
 
 
-void dispatcher_on_read_ready(Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback)
+void reactor_on_read_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback)
 {
-    Handler *h = dispatcher_create_handler( d, fd, timeout, context);
+    Handler *h = reactor_create_handler( d, fd, timeout, context);
     h->read_callback = callback;
 }
 
 
-void dispatcher_on_write_ready(Dispatcher *d, int fd, int timeout, void *context, Dispatcher_callback callback)
+void reactor_on_write_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback)
 {
-    Handler *h = dispatcher_create_handler( d, fd, timeout, context);
+    Handler *h = reactor_create_handler( d, fd, timeout, context);
     h->write_callback = callback;
 }
 
@@ -173,15 +173,15 @@ static int handler_count(Handler *l)
 }
 
 
-void dispatcher_cancel_all(Dispatcher *d)
+void reactor_cancel_all(Reactor *d)
 {
-    dispatcher_log(d, LOG_INFO, "cancel all");
+    reactor_log(d, LOG_INFO, "cancel all");
 
     // call handlers with cancelled action
     for(Handler *h = d->current; h; h = h->next) {
         Event e;
         event_init(&e);
-        e.dispatcher = d;
+        e.reactor = d;
         e.timeout = h->timeout;
         e.fd = h->fd;
         e.type = CANCELLED;
@@ -206,17 +206,17 @@ void dispatcher_cancel_all(Dispatcher *d)
 }
 
 
-void dispatcher_run(Dispatcher *d)
+void reactor_run(Reactor *d)
 {
-    while(dispatcher_run_once(d));
+    while(reactor_run_once(d));
 }
 
 
-int dispatcher_run_once(Dispatcher *d)
+int reactor_run_once(Reactor *d)
 {
     // TODO: maybe change name to run_once()?
 
-    dispatcher_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
+    reactor_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
 
     // r, w, e
     fd_set readfds, writefds, exceptfds;
@@ -266,7 +266,7 @@ int dispatcher_run_once(Dispatcher *d)
             return handler_count(d->current);
         } 
         else {
-            dispatcher_log(d, LOG_FATAL, "fatal select() error %s", strerror(errno));
+            reactor_log(d, LOG_FATAL, "fatal select() error %s", strerror(errno));
             // TODO attempt cleanup by calling cancel??
             exit(EXIT_FAILURE);
         }
@@ -276,7 +276,7 @@ int dispatcher_run_once(Dispatcher *d)
         int now = time(NULL);
         // 0 (timeout) or more resource affected
         // a resource is ready
-        // dispatcher_log(d, "number or rexceptfdsourcexceptfds ready =%d\n", ret);
+        // reactor_log(d, "number or rexceptfdsourcexceptfds ready =%d\n", ret);
 
         Handler *unchanged = NULL;
         Handler *processed = NULL;
@@ -293,13 +293,13 @@ int dispatcher_run_once(Dispatcher *d)
             Event e;
             event_init(&e);
             e.timeout = h->timeout;
-            e.dispatcher = d;
+            e.reactor = d;
             e.fd = h->fd;
 
             if(h->fd >= 0 && FD_ISSET(h->fd, &exceptfds)) {
 
                 // texceptfdst exception conditions fireadfdst
-                dispatcher_log(d, LOG_INFO, "fd %d exception", h->fd);
+                reactor_log(d, LOG_INFO, "fd %d exception", h->fd);
                 e.type = EXCEPTION;
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
@@ -314,7 +314,7 @@ int dispatcher_run_once(Dispatcher *d)
             }
             else if(h->fd >= 0 && h->read_callback && FD_ISSET(h->fd, &readfds)) {
 
-                dispatcher_log(d, LOG_DEBUG, "fd %d is ready for reading", h->fd);
+                reactor_log(d, LOG_DEBUG, "fd %d is ready for reading", h->fd);
                 e.type = OK;
                 h->read_callback(h->context, &e);
                 // transfer handler to processed list
@@ -323,7 +323,7 @@ int dispatcher_run_once(Dispatcher *d)
             }
             else if(h->fd >= 0 && h->write_callback && FD_ISSET(h->fd, &writefds)) {
 
-                dispatcher_log(d, LOG_DEBUG, "fd %d is ready for writing", h->fd);
+                reactor_log(d, LOG_DEBUG, "fd %d is ready for writing", h->fd);
                 e.type = OK;
                 h->write_callback(h->context, &e);
                 // transfer handler to processed list
@@ -332,7 +332,7 @@ int dispatcher_run_once(Dispatcher *d)
             }
             else if(h->timeout > 0 && now >= h->start_time + h->timeout) {
 
-                dispatcher_log(d, LOG_DEBUG, "fd %d timed out", h->fd);
+                reactor_log(d, LOG_DEBUG, "fd %d timed out", h->fd);
                 e.type = TIMEOUT;
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
@@ -353,9 +353,9 @@ int dispatcher_run_once(Dispatcher *d)
         }
 
         // TODO could also log the specific fds
-        dispatcher_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
-        dispatcher_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
-        dispatcher_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
+        reactor_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
+        reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
+        reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
 
         // free handler mem
         for(Handler *h = processed; h; h = next) {
@@ -382,7 +382,7 @@ int dispatcher_run_once(Dispatcher *d)
         // do we have more handlers to process?
         int count = handler_count(d->current);
         if(count == 0) {
-            dispatcher_log(d, LOG_INFO, "no more handlers to process");
+            reactor_log(d, LOG_INFO, "no more handlers to process");
         }
 
         return count;
@@ -405,7 +405,7 @@ struct SignalDetail
 };
 
 
-static void dispatcher_sigaction(int signal, siginfo_t *siginfo, ucontext_t *ucontext)
+static void reactor_sigaction(int signal, siginfo_t *siginfo, ucontext_t *ucontext)
 {
     // fprintf(stdout, "my_sa_sigaction -> got signal %d from pid %d\n", signal, siginfo->si_pid);
     SignalDetail s;
@@ -414,7 +414,7 @@ static void dispatcher_sigaction(int signal, siginfo_t *siginfo, ucontext_t *uco
 }
 
 
-void dispatcher_register_signal( Dispatcher *d, int signal )
+void reactor_register_signal( Reactor *d, int signal )
 {
     struct sigaction act;
     memset(&act, 0, sizeof(sigaction));
@@ -422,17 +422,17 @@ void dispatcher_register_signal( Dispatcher *d, int signal )
     // Use sa_sigaction over sa_handler for additional detail
     // act.sa_handler = my_sa_handler;
     act.sa_flags = SA_SIGINFO;
-    act.sa_sigaction = (void (*)(int, siginfo_t *, void *))dispatcher_sigaction;
+    act.sa_sigaction = (void (*)(int, siginfo_t *, void *))reactor_sigaction;
 
     int ret = sigaction(signal, &act, NULL);
     if(ret != 0) {
-        dispatcher_log(d, LOG_FATAL, "sigaction() failed %s", strerror(errno));
+        reactor_log(d, LOG_FATAL, "sigaction() failed %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
 
 
-void dispatcher_deregister_signal( Dispatcher *d, int signal )
+void reactor_deregister_signal( Reactor *d, int signal )
 {
     // TODO
     assert(0);
@@ -444,11 +444,11 @@ struct SignalContext
 {
     // int signal;
     void *context;
-    Dispatcher_callback callback;
+    Reactor_callback callback;
 };
 
 
-static void dispatcher_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
+static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
 {
     switch(e->type) {
         case OK: {
@@ -467,8 +467,8 @@ static void dispatcher_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
         }
         case EXCEPTION:
             // handle locally, instead of passing along...
-            dispatcher_log(
-                e->dispatcher, 
+            reactor_log(
+                e->reactor, 
                 LOG_FATAL, 
                 "exception on signal fifo, error %s", 
                 strerror(errno)
@@ -488,19 +488,19 @@ static void dispatcher_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
 }
 
 
-void dispatcher_on_signal(Dispatcher *d, int timeout, void *context, Dispatcher_callback callback)
+void reactor_on_signal(Reactor *d, int timeout, void *context, Reactor_callback callback)
 {
     SignalContext *sc = malloc(sizeof(SignalContext));
     memset(sc, 0, sizeof(SignalContext));
     // sc->signal = signal;
     sc->context = context;
     sc->callback = callback;
-    dispatcher_on_read_ready(
+    reactor_on_read_ready(
         d, 
         d->signal_fifo_readfd, 
         timeout, 
         sc, 
-        (void (*)(void *, Event *))dispatcher_on_signal_fifo_read_ready
+        (void (*)(void *, Event *))reactor_on_signal_fifo_read_ready
     );
 }
 

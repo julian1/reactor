@@ -9,7 +9,7 @@
 
 #include <stdbool.h> // c99
 
-#include <dispatcher.h>
+#include <reactor.h>
 
 typedef struct Context Context;
 struct Context
@@ -36,8 +36,8 @@ void on_read_device(Context *context, Event *e)
             // fprintf(stdout, "Got %d chars from device\n", n);
             if( n > 0)  {
                 write(1, &buf, n); // buffer - or bind a handler to know this won't block?????
-                dispatcher_on_read_ready( e->dispatcher, e->fd, -1, context, (void *)on_read_device);
-                // dispatcher_on_write_ready(e->dispatcher, e->fd, -1, context, (void *)on_wrote_device);
+                reactor_on_read_ready( e->reactor, e->fd, -1, context, (void *)on_read_device);
+                // reactor_on_write_ready(e->reactor, e->fd, -1, context, (void *)on_wrote_device);
             } else {
                 // finish up
                 fprintf(stdout, "device closed?");
@@ -65,7 +65,7 @@ void on_read_stdin(Context *context, Event *e)
             // fprintf(stdout, "Got %d chars\n", n);
             if(n > 0) {
                 write(context->device_fd, &buf, n);
-                dispatcher_on_read_ready(e->dispatcher, e->fd, -1, context, (void *)on_read_stdin);
+                reactor_on_read_ready(e->reactor, e->fd, -1, context, (void *)on_read_stdin);
             }
             break;
         }
@@ -116,7 +116,7 @@ static void on_timeout_1(Context *context, Event *e)
     led_state = !led_state;
     fprintf(stdout, "led state %d\n", led_state);
     set_modem_pin( context->device_fd, TIOCM_RTS, led_state);
-    dispatcher_on_timer(e->dispatcher, 1, context, (void *)on_timeout_1);
+    reactor_on_timer(e->reactor, 1, context, (void *)on_timeout_1);
 } 
 
 
@@ -144,15 +144,15 @@ int main()
     fprintf(stdout, "ospeed %d", argp.c_ospeed );
 //    speed_t c_ospeed;
 
-    Dispatcher *d = dispatcher_create();
-//    dispatcher_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
-//    dispatcher_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
+    Reactor *d = reactor_create();
+//    reactor_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
+//    reactor_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
 
-    dispatcher_on_timer(d, 1, &context, (void *)on_timeout_1);
+    reactor_on_timer(d, 1, &context, (void *)on_timeout_1);
 
-    // dispatcher_cancel_all(d);
-    while(dispatcher_run_once(d));
-    dispatcher_destroy(d);
+    // reactor_cancel_all(d);
+    while(reactor_run_once(d));
+    reactor_destroy(d);
     return 0;
 /**/
 }

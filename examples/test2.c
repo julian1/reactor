@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 
-#include <dispatcher.h>
+#include <reactor.h>
 
 
 static void on_read_ready(void *context, Event *e)
@@ -17,7 +17,7 @@ static void on_read_ready(void *context, Event *e)
           fprintf(stdout, "read %d chars\n", n);
           if( n > 0)  {
               // ok, read some more
-              dispatcher_on_read_ready(e->dispatcher, e->fd, -1, context, (void *)on_read_ready);
+              reactor_on_read_ready(e->reactor, e->fd, -1, context, (void *)on_read_ready);
           } else {
               // finish up
               close(e->fd);
@@ -40,11 +40,11 @@ static void on_read_ready(void *context, Event *e)
 int main()
 {
   int stdin_fd = 0;
-  Dispatcher *d = dispatcher_create();
-  dispatcher_on_read_ready(d, stdin_fd, -1, NULL, (void *)on_read_ready);
-  // dispatcher_cancel_all(d);
-  dispatcher_run(d);
-  dispatcher_destroy(d);
+  Reactor *d = reactor_create();
+  reactor_on_read_ready(d, stdin_fd, -1, NULL, (void *)on_read_ready);
+  // reactor_cancel_all(d);
+  reactor_run(d);
+  reactor_destroy(d);
   return 0;
 }
 
