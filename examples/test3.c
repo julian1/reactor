@@ -25,7 +25,7 @@ void on_wrote_device(Context *context, Event *e)
 }
 */
 
-void on_read_device(Context *context, Event *e)
+static void on_read_device(Context *context, Event *e)
 {
     assert(context->device_fd == e->fd);
 
@@ -54,7 +54,7 @@ void on_read_device(Context *context, Event *e)
 }
 
 
-void on_read_stdin(Context *context, Event *e)
+static void on_read_stdin(Context *context, Event *e)
 {
     switch(e->type) {
         case OK: {

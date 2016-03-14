@@ -1,14 +1,16 @@
 
 ### REACTOR/DEMUX
 
-  A micro reactor/demultiplexor event framework for linux in C
+  An event reactor/demultiplexor micro-framework for Linux in C
 
 #### FEATURES
 
-  - event demux for timers, sockets, stdin/stdout, serial, signals
-  - support for a user created context to be passed to the callback handler
-  - sensible/synchronous handling of interupts
-  - clean cancel/terminate semantics to allow easy/custom resource cleanup
+  - event demux for timers, signals, sockets, stdin/stdout, serial etc
+  - supports a user context to be passed to the callback handler
+  - synchronous handling of signal interupts
+  - specify timeout for any io action
+  - clean cancel/terminate semantics and to enable easy resource cleanup
+  - no attempt to abstract/hide ioctl()-like functionality 
 
 #### NOTES
 
@@ -19,21 +21,23 @@
         - dmux dispatching always synchronous
       - Proactor
         - additionally handle the read or write asynchronously in kernel and then dispatch with data to handler
-        - strands...
+        - strands, apartment thread contexts...
   - For the most part a proactor can be built around a reactor
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
-
-  - investigate whether ok, to mix fopen(stdout) for logging with open(1)...
+ 
+  - maybe move signal fifo handling outside pure reactor
+  - change name ureactor or udemux?
+  - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - use gettimeofday() instead of time for millisec prec.
   - signal deregistration
-  - compute lowest possible timeout value (eg. next possible timeout ) as select sleep time
+  - compute smallest timeout value across all handlers and use as select() sleep timeout
     - Currently, timer resolution is low - order of 100ms - designed for basic network operations only
   - investage issue when using serial-comm and the double \n\n
   - perhaps combine the read/write callback... and use
       READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
-  - investigate - ioctl for sockets to discover number bytes in buffer yet to transmit. like boost asio
+  - investigate - ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
   - example simple serial comms
     - ioctl tty_ioctl set baud, rts, dtr
   - network examples

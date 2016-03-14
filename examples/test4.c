@@ -15,7 +15,7 @@
 #include <reactor.h>
 
 
-void signal_callback(void *context, Event *e)
+static void signal_callback(void *context, Event *e)
 {
     switch(e->type) {
       case OK:

@@ -223,7 +223,7 @@ int reactor_run_once(Reactor *d)
 
     int max_fd = 0;
 
-    // load up select() watch sets
+    // load select() watch sets
     for(Handler *h = d->current; h; h = h->next) {
 
         // only real fds...

@@ -1,5 +1,4 @@
 
-
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -7,7 +6,6 @@
 #include <string.h>
 
 #include <reactor.h>
-
 
 
 typedef struct Context Context;
@@ -18,7 +16,7 @@ struct Context {
 
 // we can open two files, and let it process...
 
-void on_read_ready(Context *x, Event *e)
+static void on_read_ready(Context *x, Event *e)
 {
     // Context *context = (Context *)e->context;
 
@@ -66,25 +64,18 @@ void reactor_read(Reactor *d, char *filename)
 }
 
 // we want to do stdin...
-
-
 // have to be careful, don't accidently bind the same fd in more than once 
 
 int main()
 {
     Reactor *d = reactor_create();
     // reactor_init(&d);
-
     reactor_read(d,"main.c"); 
     // reactor_read(&d,"main.c"); 
-
     while(reactor_run_once(d));
-
 /*
     fd = open("/dev/random", O_RDWR);
 */
     return 0;
 }
-
-
 
