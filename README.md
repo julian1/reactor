@@ -27,30 +27,33 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
-
-  - get bind, and test that can spawn new contexts easily
+  - rename d-> vars to r->
+  - get bind() and listen() and check that can spawn new contexts easily
   - rename Event to ReactorEvent or use reactor_event_t etc
   - simultaneous read and write handler binding
   - maybe move signal fifo handling outside pure reactor
   - change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - signal deregistration
-
-   investage issue when using serial-comm and the double \n\n
+  - issue with binding both read/write is that might want to cancel one in response to the other? 
+      - reason to encode the action... rather
+  - fix device echo issue
   - perhaps combine the read/write callback... and use
       READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
   - investigate - ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
   - example simple serial comms
     - ioctl tty_ioctl set baud, rts, dtr
   - network examples
+    - http
     - dns
-    - socket bind/listen
+    - telnet socket bind/listen
   - enable cancel_all to be called in handlers while processing a cancel_all
     - WHich will make it easy to do a cancel/shutdown from any callback
   - better enum variable prefixes
 
 #### DONE
 
+  - done - investage issue when using serial-comm and the double \n\n
   - done - use gettimeofday() instead of time for millisec prec.
   - done - compute smallest timeout value across all handlers and use as select() sleep timeout
   - done - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
