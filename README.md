@@ -27,6 +27,10 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
+
+  - fix cancel_all 
+    - WHich will make it easy to do a cancel/shutdown from any callback
+  - support cancelling individual handlers (lookup by fd and type)
   - rename d-> vars to r->
   - get bind() and listen() and check that can spawn new contexts easily
   - rename Event to ReactorEvent or use reactor_event_t etc
@@ -47,8 +51,6 @@
     - http
     - dns
     - telnet socket bind/listen
-  - enable cancel_all to be called in handlers while processing a cancel_all
-    - WHich will make it easy to do a cancel/shutdown from any callback
   - better enum variable prefixes
 
 #### DONE

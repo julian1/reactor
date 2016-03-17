@@ -16,6 +16,8 @@
 //#include <linux/stat.h>
 #include <signal.h>
 
+#include <stdbool.h> // c99
+
 #include <reactor.h>
 
 
@@ -34,6 +36,8 @@ struct Handler
 
     struct timeval start_time;
     struct timeval timeout_time;
+
+    bool        cancelled;
 
     void        *context;
     void        (*read_callback)(void *context, Event *);
@@ -193,10 +197,33 @@ static int handler_count(Handler *l)
 
 void reactor_cancel_all(Reactor *d)
 {
+    /*
+        SIMPLE  
+            just set a flag in the reactor and handle correctly
+            in run_once. by testing and then calling all the handlers.
+
+        Actually why not just mark against each handler...
+        and process normally...
+
+        Not sure this works. It sets up a recursion
+
+        run_once -> callback -> cancel_all -> callback  
+
+        if called in a callback while processing list - then the freeing of 
+        handlers will wreck the process 
+
+    
+        might have to appraoch another way - setting a flag in the handler
+        and have it cleaned up in the bind?
+        eg. 
+    */
     reactor_log(d, LOG_INFO, "cancel all");
 
+    Handler *current = d->current;
+    d->current = NULL;
+ 
     // call handlers with cancelled action
-    for(Handler *h = d->current; h; h = h->next) {
+    for(Handler *h = current; h; h = h->next) {
         Event e;
         event_init(&e);
         e.reactor = d;
@@ -214,13 +241,16 @@ void reactor_cancel_all(Reactor *d)
 
     // cleanup - doesn't really need separate different loop...
     Handler *next = NULL;
-    for(Handler *h = d->current; h; h = next) {
+    for(Handler *h = current; h; h = next) {
         next = h->next;
         memset(h, 0, sizeof(Handler));
         free(h);
     }
 
-    d->current = NULL;
+    if(d->current) {
+        reactor_log(d, LOG_FATAL, "handlers were bound during cancel_all()");
+        exit(EXIT_FAILURE);
+    }
 }
 
 
@@ -234,6 +264,26 @@ int reactor_run_once(Reactor *d)
 {
     reactor_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
 
+    
+    // we want to handle cancelled right up the start?  so we don't block if everything is cancelled
+    // except we don't want to 
+    // e.type = CANCELLED;
+    // needs to be done against an individual handler anyway...
+
+    // transfer non ca
+/*
+    for(Handler *h = d->current; h; h = h->next) {
+        // is cancelled
+        if(h->fd >= 0) {
+            // call callback
+            // free mem
+            // and remove from list
+        }
+    } 
+
+    if( anything was cancelled then just return) to rerun... 
+    that allows cancel_all()
+*/
     // r, w, e
     fd_set readfds, writefds, exceptfds;
     FD_ZERO(&readfds);
