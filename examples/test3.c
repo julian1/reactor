@@ -85,7 +85,7 @@ static void on_read_stdin(Context *context, Event *e)
 // static bool pin;
 
 static void set_modem_pin(int device_fd, int flag, bool pin)
-{ 
+{
     int argp;
     ioctl(device_fd, TIOCMGET, &argp);
     if(ioctl(device_fd, TIOCMGET, &argp) < 0) {
@@ -111,13 +111,13 @@ static void set_modem_pin(int device_fd, int flag, bool pin)
 
 static void on_timeout_1(Context *context, Event *e)
 {
-    // 
+    //
     static bool led_state = 0;  // should move into context
     led_state = !led_state;
     fprintf(stdout, "led state %d\n", led_state);
     set_modem_pin( context->device_fd, TIOCM_RTS, led_state);
     reactor_on_timer(e->reactor, 1, context, (void *)on_timeout_1);
-} 
+}
 
 
 

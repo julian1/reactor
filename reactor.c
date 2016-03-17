@@ -65,7 +65,7 @@ Reactor *reactor_create_with_log_level(/* FILE *logout, */ Reactor_log_level lev
     d->log_level = level;
     reactor_log(d, LOG_INFO, "create");
 
-    // set up signal fifo 
+    // set up signal fifo
     int fd[2];
     if(pipe(fd) < 0) {
         reactor_log(d, LOG_FATAL, "could not create fifo pipe %s", strerror(errno));
@@ -90,8 +90,8 @@ void reactor_destroy(Reactor *d)
 
     if(d->current) {
         reactor_log(
-            d, 
-            LOG_FATAL, 
+            d,
+            LOG_FATAL,
             "destroy() called with unprocessed handlers - use cancel_all() instead"
         );
         exit(EXIT_FAILURE);
@@ -145,8 +145,8 @@ static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *co
     // set the timeout time
     if(h->timeout >= 0) {
         struct timeval timeout;
-        timeout.tv_sec =  h->timeout / 1000; 
-        timeout.tv_usec = (h->timeout % 1000) * 1000; 
+        timeout.tv_sec =  h->timeout / 1000;
+        timeout.tv_usec = (h->timeout % 1000) * 1000;
         timeradd(&h->start_time, &timeout, &h->timeout_time);
     }
 
@@ -281,7 +281,7 @@ int reactor_run_once(Reactor *d)
     for(Handler *h = d->current; h; h = h->next) {
         if(h->timeout > 0) {
             struct timeval remaining;
-            timersub(&h->timeout_time, &now, &remaining); 
+            timersub(&h->timeout_time, &now, &remaining);
             if(timercmp(&remaining, &timeout, <)) {
                 timeout = remaining; // struct assign or memcpy...
             }
@@ -290,11 +290,11 @@ int reactor_run_once(Reactor *d)
 
     if(select(max_fd + 1, &readfds, &writefds, &exceptfds, &timeout) < 0) {
         if(errno == EINTR) {
-            // signal interupt 
+            // signal interupt
             // simply return to allow caller to rebind
             // avoids needing to interpret/process exceptions rased in exceptfds
             return handler_count(d->current);
-        } 
+        }
         else {
             reactor_log(d, LOG_FATAL, "select() error '%s'", strerror(errno));
             // TODO attempt cleanup by calling cancel??
@@ -311,7 +311,7 @@ int reactor_run_once(Reactor *d)
             reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
             exit(EXIT_FAILURE);
         }
-     
+
         //int now = time(NULL);
         // 0 (timeout) or more resource affected
         // a resource is ready
@@ -337,7 +337,7 @@ int reactor_run_once(Reactor *d)
 
             // we have to test timeout for all handlers...
             // don't have to do it if no timeout set...
-  
+
             // rather than compute this each time. lets do it once when
             // create the handler...
 
@@ -440,12 +440,12 @@ int reactor_run_once(Reactor *d)
 
 /*
     Signal/interupt handling
-    strategy is to push interupt details onto a unnamed fifo pipe, and then 
-    read them again in the desired handler/thread context   
+    strategy is to push interupt details onto a unnamed fifo pipe, and then
+    read them again in the desired handler/thread context
 */
 
 typedef struct SignalDetail SignalDetail;
-struct SignalDetail 
+struct SignalDetail
 {
     int signal;
 };
@@ -500,11 +500,11 @@ static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
         case OK: {
             SignalDetail s;
             if(read(e->fd, &s, sizeof(SignalDetail)) == sizeof(SignalDetail))  {
-                // fprintf(stdout, "got signal %d\n", s.signal); 
+                // fprintf(stdout, "got signal %d\n", s.signal);
                 // call the inner function
                 // fill in the signal number for event and call the callback
                 e->signal = s.signal;
-                (sc->callback)(sc->context, e); 
+                (sc->callback)(sc->context, e);
             } else {
                 // something went wrong...
                 assert(0);
@@ -514,16 +514,16 @@ static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
         case EXCEPTION:
             // handle locally, instead of passing along...
             reactor_log(
-                e->reactor, 
-                LOG_FATAL, 
-                "exception on signal fifo, error %s", 
+                e->reactor,
+                LOG_FATAL,
+                "exception on signal fifo, error %s",
                 strerror(errno)
             );
             exit(EXIT_FAILURE);
             break;
         case TIMEOUT:
         case CANCELLED:
-            (sc->callback)(sc->context, e); 
+            (sc->callback)(sc->context, e);
             break;
         default:
             assert(0);
@@ -542,10 +542,10 @@ void reactor_on_signal(Reactor *d, int timeout, void *context, Reactor_callback 
     sc->context = context;
     sc->callback = callback;
     reactor_on_read_ready(
-        d, 
-        d->signal_fifo_readfd, 
-        timeout, 
-        sc, 
+        d,
+        d->signal_fifo_readfd,
+        timeout,
+        sc,
         (void (*)(void *, Event *))reactor_on_signal_fifo_read_ready
     );
 }
