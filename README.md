@@ -53,8 +53,6 @@
 
   - done - use gettimeofday() instead of time for millisec prec.
   - done - compute smallest timeout value across all handlers and use as select() sleep timeout
-    - Currently, timer resolution is low - order of 100ms - designed for basic network operations only
-  -
   - done - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
   - done - signals using fifo (maybe outside the core dispatcher)
   - done - move tests into examples...
