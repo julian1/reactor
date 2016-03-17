@@ -302,7 +302,6 @@ int reactor_run_once(Reactor *d)
         }
     }
     else {
-
         reactor_log(d, LOG_DEBUG, "returned from select()");
 
         struct timeval now;
@@ -312,35 +311,26 @@ int reactor_run_once(Reactor *d)
             exit(EXIT_FAILURE);
         }
 
-        //int now = time(NULL);
-        // 0 (timeout) or more resource affected
-        // a resource is ready
-        // reactor_log(d, "number or rexceptfdsourcexceptfds ready =%d\n", ret);
-
+        // handler lists
         Handler *unchanged = NULL;
         Handler *processed = NULL;
-        // clear handler list, so that callbacks can bind new handlers onto fresh list
         Handler *current = d->current;
-        d->current = NULL;
         Handler *next = NULL;
 
-        // process the current by calling callbacks and putting on new lists
+        // clear handler list, so that callbacks can bind new handlers onto fresh list
+        d->current = NULL;
+
+        // process current list by calling handler callbacks and transfering
         for(Handler *h = current; h; h = next) {
 
             next = h->next;
 
+            // construct basic event info
             Event e;
             event_init(&e);
             e.timeout = h->timeout;
             e.reactor = d;
             e.fd = h->fd;
-
-            // we have to test timeout for all handlers...
-            // don't have to do it if no timeout set...
-
-            // rather than compute this each time. lets do it once when
-            // create the handler...
-
 
             if(h->fd >= 0 && FD_ISSET(h->fd, &exceptfds)) {
 
@@ -384,8 +374,9 @@ int reactor_run_once(Reactor *d)
                   h->read_callback(h->context, &e);
                 else if(h->write_callback)
                   h->write_callback(h->context, &e);
-                else
+                else {
                   assert(0);
+                }
                 // transfer handler to processed list
                 h->next = processed;
                 processed = h;
@@ -398,7 +389,7 @@ int reactor_run_once(Reactor *d)
             }
         }
 
-        // TODO could also log the specific fds
+        // TODO could log the list of fds for each list...
         reactor_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
         reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
         reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
@@ -418,7 +409,7 @@ int reactor_run_once(Reactor *d)
             while(p && p->next)
                 p = p->next;
 
-            // and tack on the unchanged list
+            // and add
             p->next = unchanged;
         } else {
             // no new handlers, so handlers are simply remaining unprocessed handlers
