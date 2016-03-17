@@ -68,7 +68,7 @@ Reactor *reactor_create_with_log_level(/* FILE *logout, */ Reactor_log_level lev
     // set up signal fifo
     int fd[2];
     if(pipe(fd) < 0) {
-        reactor_log(d, LOG_FATAL, "could not create fifo pipe %s", strerror(errno));
+        reactor_log(d, LOG_FATAL, "pipe() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
     d->signal_fifo_readfd = fd[0];
@@ -138,7 +138,7 @@ static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *co
     h->timeout = timeout;
 
     if(gettimeofday(&h->start_time, NULL) < 0) {
-        reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
+        reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -268,7 +268,7 @@ int reactor_run_once(Reactor *d)
     struct timeval now;
 
     if(gettimeofday(&now, NULL) < 0) {
-        reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
+        reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -296,7 +296,7 @@ int reactor_run_once(Reactor *d)
             return handler_count(d->current);
         }
         else {
-            reactor_log(d, LOG_FATAL, "select() error '%s'", strerror(errno));
+            reactor_log(d, LOG_FATAL, "select() failed '%s'", strerror(errno));
             // TODO attempt cleanup by calling cancel??
             exit(EXIT_FAILURE);
         }
@@ -308,7 +308,7 @@ int reactor_run_once(Reactor *d)
         struct timeval now;
 
         if(gettimeofday(&now, NULL) < 0) {
-            reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
+            reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -472,7 +472,7 @@ void reactor_register_signal( Reactor *d, int signal )
 
     int ret = sigaction(signal, &act, NULL);
     if(ret != 0) {
-        reactor_log(d, LOG_FATAL, "sigaction() failed %s", strerror(errno));
+        reactor_log(d, LOG_FATAL, "sigaction() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
@@ -513,12 +513,7 @@ static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
         }
         case EXCEPTION:
             // handle locally, instead of passing along...
-            reactor_log(
-                e->reactor,
-                LOG_FATAL,
-                "exception on signal fifo, error %s",
-                strerror(errno)
-            );
+            reactor_log(e->reactor, LOG_FATAL, "exception on signal fifo '%s'", strerror(errno));
             exit(EXIT_FAILURE);
             break;
         case TIMEOUT:
