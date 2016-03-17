@@ -10,6 +10,9 @@
 #include <time.h>
 #include <stdarg.h>
 
+#include <sys/time.h>
+
+
 //#include <linux/stat.h>
 #include <signal.h>
 
@@ -27,8 +30,11 @@ struct Handler
 {
     Handler     *next;
     int         fd;
-    int         timeout;    // secs
-    int         start_time; // secs
+    int         timeout;    // in millisecs
+
+    struct timeval start_time;
+    struct timeval timeout_time;
+
     void        *context;
     void        (*read_callback)(void *context, Event *);
     void        (*write_callback)(void *context, Event *);
@@ -123,14 +129,27 @@ void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
 }
 
 
-static Handler * reactor_create_handler(Reactor *d, int fd, int timeout, void *context)
+static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *context)
 {
     Handler *h = (Handler *)malloc(sizeof(Handler));
     memset(h, 0, sizeof(Handler));
     h->fd = fd;
     // we don't really need to record both, but s
     h->timeout = timeout;
-    h->start_time = time(NULL);
+
+    if(gettimeofday(&h->start_time, NULL) < 0) {
+        reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    // set the timeout time
+    if(h->timeout >= 0) {
+        struct timeval timeout;
+        timeout.tv_sec =  h->timeout / 1000; 
+        timeout.tv_usec = (h->timeout % 1000) * 1000; 
+        timeradd(&h->start_time, &timeout, &h->timeout_time);
+    }
+
     h->context = context;
     // tack onto the handler list
     h->next = d->current;
@@ -223,12 +242,10 @@ int reactor_run_once(Reactor *d)
 
     int max_fd = 0;
 
-    // load select() watch sets
+    // create file descriptor sets
     for(Handler *h = d->current; h; h = h->next) {
-
         // only real fds...
         if(h->fd >= 0) {
-
             // we always want to know about exceptions
             FD_SET(h->fd, &exceptfds);
 
@@ -248,12 +265,28 @@ int reactor_run_once(Reactor *d)
 
     // issue if fd appeareadfds in two sets at the same time?...
 
-    // TODO could compute iterate the handler list and compute the smallexceptfdst expected
-    // timeout value, and use it for the next select timeout
+    struct timeval now;
+
+    if(gettimeofday(&now, NULL) < 0) {
+        reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
 
     struct timeval timeout;
-    timeout.tv_sec = 0; // 60
-    timeout.tv_usec = 300 * 1000;  // 300ms
+    // longest timeout before select() returns. eg. 10 seconds
+    timeout.tv_sec = 10;
+    timeout.tv_usec = 0;
+
+    // find handler with next possible timeout and set timeout to remaining time
+    for(Handler *h = d->current; h; h = h->next) {
+        if(h->timeout > 0) {
+            struct timeval remaining;
+            timersub(&h->timeout_time, &now, &remaining); 
+            if(timercmp(&remaining, &timeout, <)) {
+                timeout = remaining; // struct assign or memcpy...
+            }
+        }
+    }
 
     if(select(max_fd + 1, &readfds, &writefds, &exceptfds, &timeout) < 0) {
         if(errno == EINTR) {
@@ -263,21 +296,30 @@ int reactor_run_once(Reactor *d)
             return handler_count(d->current);
         } 
         else {
-            reactor_log(d, LOG_FATAL, "fatal select() error %s", strerror(errno));
+            reactor_log(d, LOG_FATAL, "select() error '%s'", strerror(errno));
             // TODO attempt cleanup by calling cancel??
             exit(EXIT_FAILURE);
         }
     }
     else {
 
-        int now = time(NULL);
+        reactor_log(d, LOG_DEBUG, "returned from select()");
+
+        struct timeval now;
+
+        if(gettimeofday(&now, NULL) < 0) {
+            reactor_log(d, LOG_FATAL, "gettimeofday() failed %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+     
+        //int now = time(NULL);
         // 0 (timeout) or more resource affected
         // a resource is ready
         // reactor_log(d, "number or rexceptfdsourcexceptfds ready =%d\n", ret);
 
         Handler *unchanged = NULL;
         Handler *processed = NULL;
-        // clear handler list, so that callbacks can bind in new handlers
+        // clear handler list, so that callbacks can bind new handlers onto fresh list
         Handler *current = d->current;
         d->current = NULL;
         Handler *next = NULL;
@@ -293,9 +335,16 @@ int reactor_run_once(Reactor *d)
             e.reactor = d;
             e.fd = h->fd;
 
+            // we have to test timeout for all handlers...
+            // don't have to do it if no timeout set...
+  
+            // rather than compute this each time. lets do it once when
+            // create the handler...
+
+
             if(h->fd >= 0 && FD_ISSET(h->fd, &exceptfds)) {
 
-                // texceptfdst exception conditions fireadfdst
+                // test exception conditions first
                 reactor_log(d, LOG_INFO, "fd %d exception", h->fd);
                 e.type = EXCEPTION;
                 if(h->read_callback)
@@ -327,7 +376,7 @@ int reactor_run_once(Reactor *d)
                 h->next = processed;
                 processed = h;
             }
-            else if(h->timeout > 0 && now >= h->start_time + h->timeout) {
+            else if(h->timeout >= 0 && timercmp(&now, &h->timeout_time, >=)) {
 
                 reactor_log(d, LOG_DEBUG, "fd %d timed out", h->fd);
                 e.type = TIMEOUT;

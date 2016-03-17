@@ -34,11 +34,9 @@
   - maybe move signal fifo handling outside pure reactor
   - change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
-  - use gettimeofday() instead of time for millisec prec.
   - signal deregistration
-  - compute smallest timeout value across all handlers and use as select() sleep timeout
-    - Currently, timer resolution is low - order of 100ms - designed for basic network operations only
-  - investage issue when using serial-comm and the double \n\n
+
+   investage issue when using serial-comm and the double \n\n
   - perhaps combine the read/write callback... and use
       READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
   - investigate - ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
@@ -53,6 +51,10 @@
 
 #### DONE
 
+  - done - use gettimeofday() instead of time for millisec prec.
+  - done - compute smallest timeout value across all handlers and use as select() sleep timeout
+    - Currently, timer resolution is low - order of 100ms - designed for basic network operations only
+  -
   - done - change dispatcher name to reactor or demux? or separate demux and handler dispatch?
   - done - signals using fifo (maybe outside the core dispatcher)
   - done - move tests into examples...
