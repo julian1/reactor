@@ -62,7 +62,7 @@ static void on_read_stdin(Context *context, Event *e)
             // also eof for disconnect if socket, but not always - eg. fill
             char buf[1000];
             int n = read(e->fd, &buf, 1000);
-            // fprintf(stdout, "Got %d chars\n", n);
+            // fprintf(stdout, "Got %d chars from stdin\n", n);
             if(n > 0) {
                 write(context->device_fd, &buf, n);
                 reactor_on_read_ready(e->reactor, e->fd, -1, context, (void *)on_read_stdin);
@@ -145,10 +145,10 @@ int main()
 //    speed_t c_ospeed;
 
     Reactor *d = reactor_create();
-//    reactor_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
-//    reactor_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
+    reactor_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
+    reactor_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
 
-    reactor_on_timer(d, 1, &context, (void *)on_timeout_1);
+//     reactor_on_timer(d, 1, &context, (void *)on_timeout_1);
 
     // reactor_cancel_all(d);
     while(reactor_run_once(d));
