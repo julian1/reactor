@@ -229,7 +229,7 @@ int reactor_run_once(Reactor *d)
     reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
 
 
-    // concatenate new handlers onto the current handler list
+    // transfer new handlers to current list
     if(d->current) {
         Handler *p = d->current;
         while(p->next)
@@ -241,7 +241,7 @@ int reactor_run_once(Reactor *d)
     d->new = NULL;
 
 
-    // maybe mark cancelled handlers
+    // mark handlers to be cancelled
     if(d->cancel_all_handlers) {
         for(Handler *h = d->current; h; h = h->next) {
             h->cancelled = true;
@@ -251,24 +251,17 @@ int reactor_run_once(Reactor *d)
  
     // processed cancelled handlers
     {
-        // maintaining separate lists, makes it easier to log, and cleanup, and avoids processing status booleans
-        // IMPORTANT Doing cleanup in separate loop is better since
-        // callback might manipuate another handler's state - such as setting cancelled flag
-
+        // using process lists makes it easier to log, and cleanup, and avoids processing status booleans
         Handler *unchanged = NULL;
         Handler *cancelled = NULL;
         Handler *next = NULL;
         Handler *current = d->current;
         d->current = NULL;
 
-        // we cannot traverse the current list, when calling callbacks inside
-        // this traversal of the current list...
-
         for(Handler *h = current; h; h = next) {
 
             next = h->next;
             if(h->cancelled) {
-
                 Event e;
                 event_init(&e);
                 e.reactor = d;
@@ -318,7 +311,7 @@ int reactor_run_once(Reactor *d)
     }
 
 
-    // create descriptor watch sets
+    // create file descriptor watch sets
     fd_set readfds, writefds, exceptfds;
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
@@ -326,9 +319,9 @@ int reactor_run_once(Reactor *d)
     int max_fd = 0;
 
     for(Handler *h = d->current; h; h = h->next) {
-        // only real fds...
+        // only real fds
         if(h->fd >= 0) {
-            // we always want to know about exceptions
+            // we always want to know about exceptions or out-of-band events
             FD_SET(h->fd, &exceptfds);
 
             if(h->read_callback) {
@@ -346,10 +339,8 @@ int reactor_run_once(Reactor *d)
     }
 
 
-    // determine select() timeout
+    // workout the select() timeout - default of 10 seconds
     struct timeval timeout;
-
-    // default of 10 seconds
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
@@ -377,9 +368,9 @@ int reactor_run_once(Reactor *d)
     if(select(max_fd + 1, &readfds, &writefds, &exceptfds, &timeout) < 0) {
         if(errno == EINTR) {
             // signal interupt
-            // just return and allow caller to rebind
+            // return to allow caller to re-enter
             // this avoids having to interpret/process exceptions rased on exceptfds
-            return handler_count(d->current);
+            return handler_count(d->current) + handler_count(d->new);
         }
         else {
             reactor_log(d, LOG_FATAL, "select() failed '%s'", strerror(errno));
@@ -403,10 +394,10 @@ int reactor_run_once(Reactor *d)
         Handler *current = d->current;
         Handler *next = NULL;
 
-        // clear handler list, to prevent any accidental access to list while processing list
+        // clear handler list, and prevent accidental use of list while processing list
         d->current = NULL;
 
-        // process current list by calling handler callbacks and transfering
+        // process handler list by calling handler callbacks and transfering to new lists
         for(Handler *h = current; h; h = next) {
 
             next = h->next;

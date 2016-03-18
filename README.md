@@ -28,8 +28,6 @@
 
 #### TODO
 
-  - fix cancel_all 
-    - WHich will make it easy to do a cancel/shutdown from any callback
   - support cancelling individual handlers (lookup by fd and type)
   - rename d-> vars to r->
   - get bind() and listen() and check that can spawn new contexts easily
@@ -54,7 +52,8 @@
   - better enum variable prefixes
 
 #### DONE
-
+  - done - fix cancel_all 
+    - make it easy to do a cancel/shutdown from any callback
   - done - investage issue when using serial-comm and the double \n\n
   - done - use gettimeofday() instead of time for millisec prec.
   - done - compute smallest timeout value across all handlers and use as select() sleep timeout
