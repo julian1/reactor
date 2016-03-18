@@ -287,28 +287,26 @@ int reactor_run_once(Reactor *d)
 
         if(cancelled) {
             Handler *next = NULL;
-            // free handler mem
+            // free cancelled handler mem
             for(Handler *h = cancelled; h; h = next) {
                 next = h->next;
                 memset(h, 0, sizeof(Handler));
                 free(h);
             }
 
-            // return immediately to avoid select() block where all handlers were cancelled
+            // return immediately to avoid select() blocking where all handlers were cancelled
             return handler_count(d->current);
         }
     }
 
 
-    // r, w, e
+    // create file descriptor sets
     fd_set readfds, writefds, exceptfds;
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_ZERO(&exceptfds);
-
     int max_fd = 0;
 
-    // create file descriptor sets
     for(Handler *h = d->current; h; h = h->next) {
         // only real fds...
         if(h->fd >= 0) {
@@ -330,13 +328,15 @@ int reactor_run_once(Reactor *d)
     }
 
 
-    // issue if fd appeareadfds in two sets at the same time?...
+    // determine timeout to use
     struct timeval timeout;
-    // longest timeout before select() returns. eg. 10 seconds
+
+    // set default of 10 seconds
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
     {
+        // adjust timeout for the next handler that could possibly timeout
         struct timeval now;
 
         if(gettimeofday(&now, NULL) < 0) {
@@ -344,7 +344,6 @@ int reactor_run_once(Reactor *d)
             exit(EXIT_FAILURE);
         }
 
-        // find handler with next possible timeout and set timeout to remaining time
         for(Handler *h = d->current; h; h = h->next) {
             if(h->timeout > 0) {
                 struct timeval remaining;
@@ -356,11 +355,12 @@ int reactor_run_once(Reactor *d)
         }
     }
 
+    // wait for i/o
     if(select(max_fd + 1, &readfds, &writefds, &exceptfds, &timeout) < 0) {
         if(errno == EINTR) {
             // signal interupt
-            // simply return to allow caller to rebind
-            // avoids needing to interpret/process exceptions rased in exceptfds
+            // just return and allow caller to rebind
+            // this avoids having to interpret/process exceptions rased on exceptfds
             return handler_count(d->current);
         }
         else {
