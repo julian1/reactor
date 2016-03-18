@@ -4,22 +4,21 @@
 #include <stdio.h>
 #include <unistd.h>
 
-
 #include <reactor.h>
 
 
 static void on_read_ready(void *context, Event *e)
 {
-  switch(e->type) {
+    switch(e->type) {
       case OK: {
           char buf[1000];
           int n = read(e->fd, &buf, 1000);
           fprintf(stdout, "read %d chars\n", n);
-          if( n > 0)  {
-              // ok, read some more
+          if(n > 0)  {
+              // read more
               reactor_on_read_ready(e->reactor, e->fd, -1, context, (void *)on_read_ready);
           } else {
-              // finish up
+              // finish
               close(e->fd);
           }
           break;
@@ -32,11 +31,11 @@ static void on_read_ready(void *context, Event *e)
     }
 }
 
-
 /*
-  Note that in case stdin is associated  with  a  terminal,
-  This kernel input handling can be modified using calls like tcsetattr(3
+  Note that in case stdin is associated with a terminal,
+  This kernel input handling can be modified using calls like tcsetattr(3)
 */
+
 int main()
 {
   int stdin_fd = 0;
