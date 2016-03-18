@@ -7,7 +7,13 @@
 
 static void on_timeout_1(void *context, Event *e)
 {
-    fprintf(stdout, "timeout 1\n");
+    static int count = 0;
+    ++count;
+    if(count > 10) {
+        reactor_cancel_all(e->reactor);
+    }
+
+    fprintf(stdout, "timeout 1 - count %d\n", count);
     reactor_on_timer(e->reactor, e->timeout, NULL, (void *)on_timeout_1);
 }
 
@@ -24,7 +30,7 @@ int main()
 {
     Reactor *d = reactor_create();
     reactor_on_timer(d, 200, NULL, (void *)on_timeout_1);
-    reactor_on_timer(d, 5000, NULL, (void *)on_timeout_2);
+    reactor_on_timer(d, 1000, NULL, (void *)on_timeout_2);
     reactor_run(d);
     reactor_destroy(d);
     return 0;

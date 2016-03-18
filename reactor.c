@@ -51,6 +51,9 @@ struct Reactor
     FILE        *logout;
     Reactor_log_level log_level;
     Handler     *current;
+
+    bool        cancel_all_handlers;
+
     int         signal_fifo_readfd;
 };
 
@@ -93,11 +96,7 @@ void reactor_destroy(Reactor *d)
     reactor_log(d, LOG_INFO, "destroy");
 
     if(d->current) {
-        reactor_log(
-            d,
-            LOG_FATAL,
-            "destroy() called with unprocessed handlers - use cancel_all() instead"
-        );
+        reactor_log(d, LOG_FATAL, "destroy() called with unprocessed handlers");
         exit(EXIT_FAILURE);
     }
 
@@ -155,6 +154,7 @@ static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *co
     }
 
     h->context = context;
+
     // tack onto the handler list
     h->next = d->current;
     d->current = h;
@@ -194,64 +194,26 @@ static int handler_count(Handler *l)
     return n;
 }
 
+// might want some magic number checks... to check memory... 
 
 void reactor_cancel_all(Reactor *d)
 {
-    /*
-        SIMPLE  
-            just set a flag in the reactor and handle correctly
-            in run_once. by testing and then calling all the handlers.
+    reactor_log(d, LOG_INFO, "cancel_all() %p\n", d->current);
 
-        Actually why not just mark against each handler...
-        and process normally...
+    d->cancel_all_handlers = true;
 
-        Not sure this works. It sets up a recursion
+    // WHEN WE DO CALLBACKS - there's no chance to access the handler list
+    // since we shuffle items (and next pointers) while doing the processing
 
-        run_once -> callback -> cancel_all -> callback  
+    // maintain a separate new list is cleaner... and process each time. irrespective
+    // of whatever else we do...
 
-        if called in a callback while processing list - then the freeing of 
-        handlers will wreck the process 
+    // it's not the processing that's the problem. instead it's the setting of the information 
+    // an individual cancelled or something..
 
-    
-        might have to appraoch another way - setting a flag in the handler
-        and have it cleaned up in the bind?
-        eg. 
-    */
-    reactor_log(d, LOG_INFO, "cancel all");
-
-    Handler *current = d->current;
-    d->current = NULL;
- 
-    // call handlers with cancelled action
-    for(Handler *h = current; h; h = h->next) {
-        Event e;
-        event_init(&e);
-        e.reactor = d;
-        e.timeout = h->timeout;
-        e.fd = h->fd;
-        e.type = CANCELLED;
-
-        if(h->read_callback)
-          h->read_callback(h->context, &e);
-        else if(h->write_callback)
-          h->write_callback(h->context, &e);
-        else
-          assert(0);
-    }
-
-    // cleanup - doesn't really need separate different loop...
-    Handler *next = NULL;
-    for(Handler *h = current; h; h = next) {
-        next = h->next;
-        memset(h, 0, sizeof(Handler));
-        free(h);
-    }
-
-    if(d->current) {
-        reactor_log(d, LOG_FATAL, "handlers were bound during cancel_all()");
-        exit(EXIT_FAILURE);
-    }
 }
+
+// THE ONLY PLACE WE TRAVERSE THE LISTS SHOULD BE run_once()
 
 
 void reactor_run(Reactor *d)
@@ -264,26 +226,80 @@ int reactor_run_once(Reactor *d)
 {
     reactor_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
 
-    
-    // we want to handle cancelled right up the start?  so we don't block if everything is cancelled
-    // except we don't want to 
-    // e.type = CANCELLED;
-    // needs to be done against an individual handler anyway...
-
-    // transfer non ca
-/*
-    for(Handler *h = d->current; h; h = h->next) {
-        // is cancelled
-        if(h->fd >= 0) {
-            // call callback
-            // free mem
-            // and remove from list
+    // mark cancelled handlers
+    if(d->cancel_all_handlers) {
+        for(Handler *h = d->current; h; h = h->next) {
+            h->cancelled = true;
         }
-    } 
 
-    if( anything was cancelled then just return) to rerun... 
-    that allows cancel_all()
-*/
+        d->cancel_all_handlers = false;
+    }
+ 
+    // processed cancelled handlers
+    {
+        // maintaining separate lists, makes it easier to log, and cleanup, and avoids processing status booleans
+        // IMPORTANT Doing cleanup in separate loop is better since
+        // callback might manipuate another handler's state - such as setting cancelled flag
+
+        Handler *current = d->current;
+        Handler *unchanged = NULL;
+        Handler *cancelled = NULL;
+        Handler *next = NULL;
+        d->current = NULL;
+
+        // we cannot traverse the current list, when calling callbacks inside
+        // this traversal of the current list...
+
+        for(Handler *h = current; h; h = next) {
+
+            next = h->next;
+            if(h->cancelled) {
+
+                Event e;
+                event_init(&e);
+                e.reactor = d;
+                e.timeout = h->timeout;
+                e.fd = h->fd;
+                e.type = CANCELLED;
+
+                reactor_log(d, LOG_INFO, "fd %d cancelled", h->fd);
+
+                if(h->read_callback)
+                  h->read_callback(h->context, &e);
+                else if(h->write_callback)
+                  h->write_callback(h->context, &e);
+                else
+                  assert(0);
+
+                h->next = cancelled;
+                cancelled = h;
+            }
+            else {
+                h->next = unchanged;
+                unchanged = h;
+            }
+        }
+
+        reactor_log(d, LOG_DEBUG, "cancelled: %d", handler_count(cancelled));
+        reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
+
+        d->current = unchanged;
+
+        if(cancelled) {
+            Handler *next = NULL;
+            // free handler mem
+            for(Handler *h = cancelled; h; h = next) {
+                next = h->next;
+                memset(h, 0, sizeof(Handler));
+                free(h);
+            }
+
+            // return immediately to avoid select() block where all handlers were cancelled
+            return handler_count(d->current);
+        }
+    }
+
+
     // r, w, e
     fd_set readfds, writefds, exceptfds;
     FD_ZERO(&readfds);
@@ -313,27 +329,29 @@ int reactor_run_once(Reactor *d)
         }
     }
 
+
     // issue if fd appeareadfds in two sets at the same time?...
-
-    struct timeval now;
-
-    if(gettimeofday(&now, NULL) < 0) {
-        reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
     struct timeval timeout;
     // longest timeout before select() returns. eg. 10 seconds
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
-    // find handler with next possible timeout and set timeout to remaining time
-    for(Handler *h = d->current; h; h = h->next) {
-        if(h->timeout > 0) {
-            struct timeval remaining;
-            timersub(&h->timeout_time, &now, &remaining);
-            if(timercmp(&remaining, &timeout, <)) {
-                timeout = remaining; // struct assign or memcpy...
+    {
+        struct timeval now;
+
+        if(gettimeofday(&now, NULL) < 0) {
+            reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        // find handler with next possible timeout and set timeout to remaining time
+        for(Handler *h = d->current; h; h = h->next) {
+            if(h->timeout > 0) {
+                struct timeval remaining;
+                timersub(&h->timeout_time, &now, &remaining);
+                if(timercmp(&remaining, &timeout, <)) {
+                    timeout = remaining; // struct assign or memcpy...
+                }
             }
         }
     }
@@ -444,7 +462,7 @@ int reactor_run_once(Reactor *d)
         reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
         reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
 
-        // free handler mem
+        // free processed handler mem
         for(Handler *h = processed; h; h = next) {
             next = h->next;
             memset(h, 0, sizeof(Handler));
@@ -462,7 +480,7 @@ int reactor_run_once(Reactor *d)
             // and add
             p->next = unchanged;
         } else {
-            // no new handlers, so handlers are simply remaining unprocessed handlers
+            // no new handlers, so take remaining unprocessed handlers
             d->current = unchanged;
         }
 
