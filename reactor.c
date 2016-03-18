@@ -309,12 +309,16 @@ int reactor_run_once(Reactor *d)
             }
 
             // return immediately to avoid select() blocking where all handlers were cancelled
-            return handler_count(d->current);
+            int count = handler_count(d->current) + handler_count(d->new);
+            if(count == 0) {
+                reactor_log(d, LOG_INFO, "no more handlers to process");
+            }
+            return count;
         }
     }
 
 
-    // create file descriptor sets
+    // create descriptor watch sets
     fd_set readfds, writefds, exceptfds;
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
@@ -342,15 +346,15 @@ int reactor_run_once(Reactor *d)
     }
 
 
-    // determine timeout to use
+    // determine select() timeout
     struct timeval timeout;
 
-    // set default of 10 seconds
+    // default of 10 seconds
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
+    // adjust select() timeout for the next handler that could possibly timeout
     {
-        // adjust timeout for the next handler that could possibly timeout
         struct timeval now;
 
         if(gettimeofday(&now, NULL) < 0) {
@@ -485,22 +489,7 @@ int reactor_run_once(Reactor *d)
         }
 
         d->current = unchanged;
-/*
-        // concatenate the unchanged and new handler lists
-        if(d->current) {
-            // new handlers were created in callbacks
-            // so move to the end of the new list
-            Handler *p = d->current;
-            while(p && p->next)
-                p = p->next;
 
-            // and add
-            p->next = unchanged;
-        } else {
-            // no new handlers, so take remaining unprocessed handlers
-            d->current = unchanged;
-        }
-*/
         // do we have more handlers to process?
         int count = handler_count(d->current) + handler_count(d->new);
         if(count == 0) {
