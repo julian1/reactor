@@ -228,29 +228,24 @@ int reactor_run_once(Reactor *d)
     reactor_log(d, LOG_DEBUG, "current : %d", handler_count(d->current));
     reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
 
-    // concatenate the current and new handler lists
-    if(d->current) {
-        // new handlers were created in callbacks
-        // so move to the end of the new list
-        Handler *p = d->current;
-        while(p && p->next)
-            p = p->next;
 
-        // and add
+    // concatenate new handlers onto the current handler list
+    if(d->current) {
+        Handler *p = d->current;
+        while(p->next)
+            p = p->next;
         p->next = d->new;
     } else {
-        // no new handlers, so take remaining unprocessed handlers
         d->current = d->new;
     }
     d->new = NULL;
 
 
-    // mark cancelled handlers
+    // maybe mark cancelled handlers
     if(d->cancel_all_handlers) {
         for(Handler *h = d->current; h; h = h->next) {
             h->cancelled = true;
         }
-
         d->cancel_all_handlers = false;
     }
  
@@ -260,10 +255,10 @@ int reactor_run_once(Reactor *d)
         // IMPORTANT Doing cleanup in separate loop is better since
         // callback might manipuate another handler's state - such as setting cancelled flag
 
-        Handler *current = d->current;
         Handler *unchanged = NULL;
         Handler *cancelled = NULL;
         Handler *next = NULL;
+        Handler *current = d->current;
         d->current = NULL;
 
         // we cannot traverse the current list, when calling callbacks inside
@@ -281,7 +276,7 @@ int reactor_run_once(Reactor *d)
                 e.fd = h->fd;
                 e.type = CANCELLED;
 
-                reactor_log(d, LOG_INFO, "fd %d cancelled", h->fd);
+                reactor_log(d, LOG_DEBUG, "fd %d cancelled", h->fd);
 
                 if(h->read_callback)
                   h->read_callback(h->context, &e);
