@@ -51,6 +51,7 @@ struct Reactor
     FILE        *logout;
     Reactor_log_level log_level;
     Handler     *current;
+    Handler     *new;
 
     bool        cancel_all_handlers;
 
@@ -155,9 +156,9 @@ static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *co
 
     h->context = context;
 
-    // tack onto the handler list
-    h->next = d->current;
-    d->current = h;
+    // tack onto the new handler list
+    h->next = d->new;
+    d->new = h;
 
     return h;
 }
@@ -224,7 +225,25 @@ void reactor_run(Reactor *d)
 
 int reactor_run_once(Reactor *d)
 {
-    reactor_log(d, LOG_DEBUG, "current handlers: %d\n", handler_count(d->current));
+    reactor_log(d, LOG_DEBUG, "current : %d", handler_count(d->current));
+    reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
+
+    // concatenate the current and new handler lists
+    if(d->current) {
+        // new handlers were created in callbacks
+        // so move to the end of the new list
+        Handler *p = d->current;
+        while(p && p->next)
+            p = p->next;
+
+        // and add
+        p->next = d->new;
+    } else {
+        // no new handlers, so take remaining unprocessed handlers
+        d->current = d->new;
+    }
+    d->new = NULL;
+
 
     // mark cancelled handlers
     if(d->cancel_all_handlers) {
@@ -385,7 +404,7 @@ int reactor_run_once(Reactor *d)
         Handler *current = d->current;
         Handler *next = NULL;
 
-        // clear handler list, so that callbacks can bind new handlers onto fresh list
+        // clear handler list, to prevent any accidental access to list while processing list
         d->current = NULL;
 
         // process current list by calling handler callbacks and transfering
@@ -460,7 +479,8 @@ int reactor_run_once(Reactor *d)
         // TODO could log the list of fds for each list...
         reactor_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
         reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
-        reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
+        
+        assert(d->current == NULL);
 
         // free processed handler mem
         for(Handler *h = processed; h; h = next) {
@@ -469,6 +489,8 @@ int reactor_run_once(Reactor *d)
             free(h);
         }
 
+        d->current = unchanged;
+/*
         // concatenate the unchanged and new handler lists
         if(d->current) {
             // new handlers were created in callbacks
@@ -483,9 +505,9 @@ int reactor_run_once(Reactor *d)
             // no new handlers, so take remaining unprocessed handlers
             d->current = unchanged;
         }
-
+*/
         // do we have more handlers to process?
-        int count = handler_count(d->current);
+        int count = handler_count(d->current) + handler_count(d->new);
         if(count == 0) {
             reactor_log(d, LOG_INFO, "no more handlers to process");
         }
