@@ -51,7 +51,13 @@ void reactor_cancel_all(Reactor *d);
 
 void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...);
 
-// events
+
+typedef struct Handler Handler;
+
+void reactor_cancel_handler(Handler *h);
+
+// events - should return the handler - to enable easy cancel?
+// 
 void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback callback);
 
 void reactor_on_read_ready( Reactor *d, int fd, int timeout, void *context, Reactor_callback callback);
@@ -64,4 +70,5 @@ void reactor_register_signal(Reactor *d, int signal);
 void reactor_deregister_signal(Reactor *d, int signal);
 
 void reactor_on_signal(Reactor *d, int timeout, void *context, Reactor_callback callback);
+
 

@@ -248,7 +248,15 @@ int reactor_run_once(Reactor *d)
         }
         d->cancel_all_handlers = false;
     }
- 
+
+    // TODO not sure if we shouldn't remove the cancelled flag, since there is 
+    // no way to access other handlers from a callback
+    // instead construct a list of cancelled... 
+
+    // IMPORTANT: OR - simply return an actual handler when do a bind? 
+    // and let the end user arrange a cancel. 
+    // very simple
+
     // processed cancelled handlers
     {
         // using process lists makes it easier to log, and cleanup, and avoids processing status booleans
