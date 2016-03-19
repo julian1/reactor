@@ -195,26 +195,15 @@ static int handler_count(Handler *l)
     return n;
 }
 
-// might want some magic number checks... to check memory... 
 
 void reactor_cancel_all(Reactor *d)
 {
-    reactor_log(d, LOG_INFO, "cancel_all() %p\n", d->current);
-
+    reactor_log(d, LOG_INFO, "cancel_all()");
     d->cancel_all_handlers = true;
-
-    // WHEN WE DO CALLBACKS - there's no chance to access the handler list
-    // since we shuffle items (and next pointers) while doing the processing
-
-    // maintain a separate new list is cleaner... and process each time. irrespective
-    // of whatever else we do...
-
-    // it's not the processing that's the problem. instead it's the setting of the information 
-    // an individual cancelled or something..
-
 }
 
-// THE ONLY PLACE WE TRAVERSE THE LISTS SHOULD BE run_once()
+// IMPORTANT - THE ONLY PLACE WE TRAVERSE THE LISTS SHOULD BE run_once()
+// might want some magic number checks... to check memory... 
 
 
 void reactor_run(Reactor *d)

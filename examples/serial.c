@@ -148,7 +148,7 @@ int main()
     reactor_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
     reactor_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);
 
-//     reactor_on_timer(d, 1, &context, (void *)on_timeout_1);
+    reactor_on_timer(d, 1, &context, (void *)on_timeout_1);
 
     // reactor_cancel_all(d);
     while(reactor_run_once(d));
