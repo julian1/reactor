@@ -33,44 +33,38 @@ int start_listening()
     int sockfd;
     struct sockaddr_in serv_addr; 
 
-    sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK  , 0);
+    // sock
+    sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
 
+    // reuse
     int enable = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
         error("setsockopt(SO_REUSEADDR) failed");
 
-    // bzero((char *) &serv_addr, sizeof(serv_addr));
+    // bind
     memset(&serv_addr, 0, sizeof(serv_addr));
-
-    // portno = atoi(argv[1]);
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
         error("ERROR on binding");
 
-    listen(sockfd,5);
+    // listen
+    int backlog = 5;
+    listen(sockfd, backlog);
 
-
-    struct sockaddr_in cli_addr;
-    socklen_t  clilen;
-
-/*
-    clilen = sizeof(cli_addr);
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    if (newsockfd < 0) 
-        error("ERROR on accept");
-*/
-
-    clilen = sizeof(cli_addr);
-    int ret = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    // accept
+    // struct sockaddr_in cli_addr;
+    // socklen_t  clilen;
+    // clilen = sizeof(cli_addr);
+    // int ret = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    int ret = accept(sockfd, NULL, 0);//(struct sockaddr *) &cli_addr, &clilen);
 
     if (ret != -1 && errno != EAGAIN ) {
         error("ERROR on accept");
     }
-
 
     return sockfd;
 }
