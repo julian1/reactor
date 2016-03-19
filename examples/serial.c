@@ -1,14 +1,15 @@
 
 /*
-    # ESP8266 
+    # ESP8266
     # Can use rlwrap for history!
     rlwrap ./examples/serial.out
 
-    There's an issue, with device echoing the input. 
+    There's an issue, with device echoing the input.
 
-    Ok, it's resetting when we connect - need to test ioctl get 
-        and not reset unless need.
-        or else require a de-bounce cap or something
+    Ok, it's resetting when we connect - need to test ioctl get
+        - and not reset unless need.
+        -  or else require a de-bounce cap or something
+        - or we need to set hardware handshake off initially...
 
     done - There's a problem that after use esptool, then baud is set wrong
 
@@ -17,6 +18,11 @@
 
     - Use signal handler to close.
     - maybe ctrl-z to reset?
+
+    refs
+        http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux
+        https://en.wikibooks.org/wiki/Serial_Programming/termios
+        http://www.tldp.org/HOWTO/text/Serial-Programming-HOWTO
 */
 
 #include <stdio.h>
@@ -51,7 +57,7 @@ static void on_read_device(Context *context, Event *e)
         case OK: {
             char buf[1000];
             int n = read(e->fd, &buf, 1000);
-            // fprintf(stdout, "Got %d chars from device\n", n);
+            //fprintf(stdout, "Got %d chars from device\n", n);
             if( n > 0)  {
                 write(1, &buf, n); // buffer - or bind a handler to know this won't block?????
                 reactor_on_read_ready( e->reactor, e->fd, -1, context, (void *)on_read_device);
@@ -149,15 +155,29 @@ int main()
         assert(0);
     }
 
-    // set speed
+    // get data
     struct termios options;
     tcgetattr(context.device_fd, &options);
+
+    // set speed
     cfsetispeed(&options, B9600);
     cfsetospeed(&options, B9600);
+
+    // echo off, echo newline off, canonical mode off,
+    // extended input processing off, signal chars off
+    options.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
+    
+    // raw output
+    // options.c_oflag = 0;
+
+    // caconical - disable all echo, l- 
+    // options.c_lflag = ICANON ;
+
+    tcflush(context.device_fd, TCIFLUSH);   
     tcsetattr(context.device_fd, TCSANOW, &options);
 
-    set_modem_pin(context.device_fd, TIOCM_DTR, true); // gpio0, high = normal boot, low flash 
-    set_modem_pin(context.device_fd, TIOCM_RTS, true); // reset, high don't reset 
+    set_modem_pin(context.device_fd, TIOCM_DTR, true); // gpio0, high = normal boot, low flash
+    set_modem_pin(context.device_fd, TIOCM_RTS, true); // reset, high don't reset
 
     Reactor *d = reactor_create();
     if(true) {
