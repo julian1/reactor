@@ -8,6 +8,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h> // EAGAIN
+
+#include <reactor.h>
+
+typedef struct Context 
+{
+    int sockfd;
+}
+Context;
+
+
 
 void error(char *msg)
 {
@@ -22,7 +33,7 @@ int start_listening()
     int sockfd;
     struct sockaddr_in serv_addr; 
 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK  , 0);
     if (sockfd < 0) 
         error("ERROR opening socket");
 
@@ -42,6 +53,26 @@ int start_listening()
 
     listen(sockfd,5);
 
+
+    struct sockaddr_in cli_addr;
+    // do accept - which would normally block, but for non_bloc...
+    socklen_t  clilen;
+
+/*
+    clilen = sizeof(cli_addr);
+    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    if (newsockfd < 0) 
+        error("ERROR on accept");
+*/
+
+   clilen = sizeof(cli_addr);
+    int ret = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+
+    if (ret != -1 && errno != EAGAIN ) {
+        error("ERROR on accept");
+    }
+
+
     return sockfd;
 }
 
@@ -50,17 +81,9 @@ int start_listening()
 void do_accept( int sockfd )
 {
     char buffer[256];
-    struct sockaddr_in cli_addr;
     int n;
 
-    int newsockfd;//, portno;//, clilen;
-
-    socklen_t  clilen;
-
-    clilen = sizeof(cli_addr);
-    newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    if (newsockfd < 0) 
-        error("ERROR on accept");
+    int newsockfd = -1;
 
     fprintf(stdout, "here2\n");
 
@@ -76,13 +99,28 @@ void do_accept( int sockfd )
         error("ERROR writing to socket");
 }
 
+/*
+http://www.linuxquestions.org/questions/linux-software-2/what-is-the-difference-in-using-o_nonblock-in-fcntl-and-sock_nonblock-in-socket-779678/
+*/
+
+static void on_accept_ready(Context *context, Event *e)
+{
+    fprintf(stdout, "on_read_ready \n");
+
+}
+
+
 int main(int argc, char *argv[])
 {
+    // NEED TO CHANGE TO NON-BLOCK
+    Reactor *r = reactor_create( );
+    // Reactor *reactor_create_with_log_level(LOG_DEBUG );
+ 
+    Context context;
+    context.sockfd =  start_listening( ); 
 
-    int sockfd = start_listening( ); 
-    fprintf(stdout, "here1\n");
-
-    do_accept( sockfd );
+    reactor_on_read_ready(r, context.sockfd, -1, &context, (void *)on_accept_ready);
+    reactor_run(r);
 
      return 0; 
 }
