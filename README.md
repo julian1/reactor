@@ -31,7 +31,8 @@
       - will simplify, and make rebind(e) possible.
       - simultaneous read and write handler binding
 
-  - support cancelling individual handlers (lookup by fd and type)
+  - maybe support cancelling individual handlers (lookup by fd and type)
+    - or just return the handler for user to call action on?
   - rename d-> vars to r->
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
   - maybe move signal fifo handling outside pure reactor
