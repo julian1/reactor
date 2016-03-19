@@ -48,11 +48,16 @@ int main(int argc, char *argv[])
      if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
         error("ERROR on binding");
 
+
      listen(sockfd,5);
      clilen = sizeof(cli_addr);
+
+    fprintf(stdout, "here1\n");
      newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
      if (newsockfd < 0) 
           error("ERROR on accept");
+
+    fprintf(stdout, "here2\n");
 
      //bzero(buffer,256);
     memset(&buffer, 0, 256); 
