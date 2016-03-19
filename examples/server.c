@@ -16,19 +16,19 @@ void error(char *msg)
     exit(1);
 }
 
-int main(int argc, char *argv[])
+int start_listening()
 {
-     int sockfd, newsockfd, portno;//, clilen;
+    int portno = 8000;
+     int sockfd;//, newsockfd;//, portno;//, clilen;
+    struct sockaddr_in serv_addr; 
 
-     socklen_t  clilen;
 
-     char buffer[256];
-     struct sockaddr_in serv_addr, cli_addr;
-     int n;
+/*     int n;
      if (argc < 2) {
          fprintf(stderr,"ERROR, no port provided\n");
          exit(1);
      }
+*/
      sockfd = socket(AF_INET, SOCK_STREAM, 0);
      if (sockfd < 0) 
         error("ERROR opening socket");
@@ -41,18 +41,31 @@ int main(int argc, char *argv[])
      // bzero((char *) &serv_addr, sizeof(serv_addr));
      memset(&serv_addr, 0, sizeof(serv_addr));
 
-     portno = atoi(argv[1]);
+     // portno = atoi(argv[1]);
      serv_addr.sin_family = AF_INET;
      serv_addr.sin_addr.s_addr = INADDR_ANY;
      serv_addr.sin_port = htons(portno);
      if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
         error("ERROR on binding");
 
-
      listen(sockfd,5);
-     clilen = sizeof(cli_addr);
 
-    fprintf(stdout, "here1\n");
+    return sockfd;
+}
+
+
+
+void do_accept( int sockfd )
+{
+     char buffer[256];
+     struct sockaddr_in cli_addr;
+      int n;
+
+     int newsockfd;//, portno;//, clilen;
+
+     socklen_t  clilen;
+
+     clilen = sizeof(cli_addr);
      newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
      if (newsockfd < 0) 
           error("ERROR on accept");
@@ -67,6 +80,18 @@ int main(int argc, char *argv[])
      printf("Here is the message: %s\n",buffer);
      n = write(newsockfd,"I got your message",18);
      if (n < 0) error("ERROR writing to socket");
+
+
+
+}
+
+int main(int argc, char *argv[])
+{
+
+    int sockfd = start_listening( ); 
+    fprintf(stdout, "here1\n");
+
+    do_accept( sockfd );
 
      return 0; 
 }
