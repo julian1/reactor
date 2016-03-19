@@ -55,7 +55,6 @@ int start_listening()
 
 
     struct sockaddr_in cli_addr;
-    // do accept - which would normally block, but for non_bloc...
     socklen_t  clilen;
 
 /*
@@ -65,7 +64,7 @@ int start_listening()
         error("ERROR on accept");
 */
 
-   clilen = sizeof(cli_addr);
+    clilen = sizeof(cli_addr);
     int ret = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
     if (ret != -1 && errno != EAGAIN ) {
@@ -105,14 +104,23 @@ http://www.linuxquestions.org/questions/linux-software-2/what-is-the-difference-
 
 static void on_accept_ready(Context *context, Event *e)
 {
-    fprintf(stdout, "on_read_ready \n");
+    fprintf(stdout, "on_accept_ready \n");
 
+    struct sockaddr_in cli_addr;
+    socklen_t  clilen;
+
+    clilen = sizeof(cli_addr);
+    int ret = accept(context->sockfd, (struct sockaddr *) &cli_addr, &clilen);
+
+    fprintf(stdout, "ret is %d\n", ret);
+
+    reactor_on_read_ready(e->reactor, context->sockfd, -1, context, (Reactor_callback) on_accept_ready);
+    // reactor_rebind(e); // in callback...
 }
 
 
 int main(int argc, char *argv[])
 {
-    // NEED TO CHANGE TO NON-BLOCK
     Reactor *r = reactor_create( );
     // Reactor *reactor_create_with_log_level(LOG_DEBUG );
  
