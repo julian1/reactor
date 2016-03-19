@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h> // EAGAIN
+#include <assert.h> // EAGAIN
 
 #include <reactor.h>
 
@@ -113,6 +114,28 @@ static void on_accept_ready(Context *context, Event *e)
 }
 
 
+static void signal_callback(Context *context, Event *e)
+{
+    switch(e->type) {
+        case OK: {
+            fprintf(stdout, "caught signal %d cancel all\n", e->signal);
+            reactor_cancel_all(e->reactor);
+
+            fprintf(stdout, "closing listening sock\n");
+            if(close(context->sockfd) != 0) { 
+                error("Could not close");
+                exit(EXIT_FAILURE);
+            }
+            exit(EXIT_SUCCESS);
+            break;
+        }
+        default:
+            assert(0);
+        }
+}
+
+
+
 int main(int argc, char *argv[])
 {
     Reactor *r = reactor_create( );
@@ -121,7 +144,10 @@ int main(int argc, char *argv[])
     Context context;
     context.sockfd =  start_listening( ); 
 
-    reactor_on_read_ready(r, context.sockfd, -1, &context, (void *)on_accept_ready);
+    reactor_register_signal(r, 2);  // SIGINT, ctrl-c
+    reactor_on_signal(r, -1, &context, (Reactor_callback)signal_callback);
+
+    reactor_on_read_ready(r, context.sockfd, -1, &context, (Reactor_callback)on_accept_ready);
     reactor_run(r);
 
      return 0; 
