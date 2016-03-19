@@ -98,6 +98,7 @@ static Conn *conn_create()
     return conn;
 }
 
+
 static void conn_destroy(Conn *conn)
 {
     close(conn->fd);

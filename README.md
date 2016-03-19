@@ -27,22 +27,23 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
+  - single combined the read/writ callback, and then type of event we're interested in...
+      - will simplify, and make rebind(e) possible.
+      - simultaneous read and write handler binding
 
   - support cancelling individual handlers (lookup by fd and type)
   - rename d-> vars to r->
-  - get bind() and listen() and check that can spawn new contexts easily
-  - rename Event to ReactorEvent or use reactor_event_t etc
-  - simultaneous read and write handler binding
+  - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
   - maybe move signal fifo handling outside pure reactor
   - change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - signal deregistration
-  - issue with binding both read/write is that might want to cancel one in response to the other? 
+  - issue with binding both read/write is that might want to cancel one in response to the other?
       - reason to encode the action... rather
+      - makes cancelling, as easy as not rebinding
   - fix device echo issue
-  - perhaps combine the read/write callback... and use
       READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
-  - investigate - ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
+  - investigate - for proactor ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
   - example simple serial comms
     - ioctl tty_ioctl set baud, rts, dtr
   - network examples
@@ -52,7 +53,9 @@
   - better enum variable prefixes
 
 #### DONE
-  - done - fix cancel_all 
+
+  - done - get bind() and listen() and check that can spawn new contexts easily
+  - done - fix cancel_all
     - make it easy to do a cancel/shutdown from any callback
   - done - investage issue when using serial-comm and the double \n\n
   - done - use gettimeofday() instead of time for millisec prec.
