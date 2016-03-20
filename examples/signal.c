@@ -13,14 +13,9 @@
 #include <assert.h>
 
 #include <reactor.h>
-#include <signal_.h>   // weird problem here....
 
-// Signal *d;
 Reactor *r;
 
-/*
-  change name reactor to dumux, dispatch or core
-*/
 
 static void signal_callback(void *context, SignalEvent *e)
 {
