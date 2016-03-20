@@ -1,17 +1,25 @@
 
 ### REACTOR
 
-  A reactor/demultiplexer event handling micro-framework for Linux in C
+  A reactor/demultiplexer event micro-framework for Linux in C
 
 #### FEATURES
 
   - event demux for timers, signals, sockets, stdin/stdout, serial etc
-  - supports application defined user contexts as part of the callback handler
-  - synchronous management of signal interupts
+  - support for application user-contexts in the callback handler
   - specify timeout for any io action
-  - clean cancel/terminate semantics and to enable easy resource cleanup
+  - synchronous management of signal interupts
+  - clean cancel/terminate semantics for easy cleanup of resources 
   - no hiding/abstracting ioctl(), tty_ioctl() etc
-  - no event queue, means simpler resource lifetime management
+  - no queue lag for simpler lifetime management
+
+#### BUILD
+```
+  $ cd ~/reactor
+  $ ./build.sh 
+  $ ./examples/timeout.out
+  ...
+```
 
 #### NOTES
 
@@ -27,27 +35,28 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
-  - maybe support cancelling individual handlers (lookup by fd and type)
-    - or just return the handler for user to call action on?
   - rename d-> vars to r->
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
+  - maybe rename ureactor or udemux?
+  - maybe rename to use lowercase underscore t
+  - maybe support cancelling individual handlers (lookup by fd and type)
+    - or just return the handler for user to call action on?
   - maybe move signal fifo handling outside pure reactor, also logging. more modular? delegate
-  - maybe change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - signal deregistration
   - fix device echo issue with serial comms
-      READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
   - investigate - for proactor ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
   - network examples
     - http
     - dns
     - telnet socket bind/listen
-  - better enum variable prefixes
+  - better enum variable prefixes - eg. prefix with 'reactor'
 
 #### DONE
   - done - combine the read/writ callback, then type the event we're interested in
       - will simplify, and make rebind(e) possible.
       - simultaneous read and write handler binding
+      - READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
   - done - issue with binding both read/write is may want to cancel one in response to the other?
       - reason to encode the action... rather
       - makes cancelling, as easy as not rebinding
@@ -70,18 +79,6 @@
   - done - write handler
 
 #### NOTES
-
-  - issue - with for signals, is that might occur while a callback is running,
-          easy way to deal with this is to create a fifo queue and write it, then use
-          select as way to process.
-
-  - The  reason  that pselect() is needed is that if one wants to wait for either a
-    signal or for a file descriptor to become ready, then an atomic test is needed
-    to prevent race conditions.
-
-  - but may not want, instead set the sig mask once on startup when we create the dispatcher
-
-  - signal, sighandler_t   - behavior varies across unix  - says use sigaction instead
 
 
   - /blog - task esp8266, and control registers. screen, minicom, miniterm that I use
