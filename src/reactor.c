@@ -42,6 +42,19 @@ void reactor_run(Reactor *u)
     demux_run(u->demux); 
 }
 
+
+
+void reactor_cancel_all(Reactor *r)
+{
+    demux_cancel_all(r->demux);
+}
+
+void reactor_on_timer(Reactor *r, int timeout, void *context, Demux_callback callback)
+{
+    demux_on_timer(r->demux, timeout, context, callback);
+}
+
+
 void reactor_on_read_ready( Reactor *u, int fd, int timeout, void *context, Demux_callback callback)
 {
     demux_on_read_ready(u->demux, fd, timeout, context, callback); 

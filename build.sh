@@ -7,7 +7,7 @@ for i in src/*.c; do
 done
 
 #for i in examples/*.c; do
-for i in examples/read.c examples/signal.c; do
+for i in examples/read.c examples/signal.c examples/timeout.c; do
   gcc -Wall $i src/*.o  -I./include -o "${i%.c}.out" || exit
 done
 

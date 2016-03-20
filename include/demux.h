@@ -35,30 +35,9 @@ struct Event
     int         fd;         // for socket,stdin,file,device etc
     int         timeout;    // associated with handler, not just timer, can make rebinding easier
     // int         signal;     // for signals
-/*
-    // support for rebinding...
-    void        *context;
-    Demux_callback callback; 
-*/
 };
 
 
-// TODO better prefixes for enum values...
-
-// ALL < DEBUG < INFO < WARN < ERROR < FATAL < OFF.
-/*
-typedef enum {
-    LOG_DEBUG,
-    LOG_INFO,
-    LOG_WARN,
-    LOG_FATAL,
-    LOG_NONE
-} Demux_log_level;
-*/
-
-
-// setup and run
-//Demux * demux_create();
 
 Demux *demux_create(Logger *);
 
@@ -80,15 +59,4 @@ void demux_on_timer(Demux *d, int timeout, void *context, Demux_callback callbac
 void demux_on_read_ready( Demux *d, int fd, int timeout, void *context, Demux_callback callback);
 
 void demux_on_write_ready(Demux *d, int fd, int timeout, void *context, Demux_callback callback);
-
-// void demux_rebind_handler(Event *e);
-
-/*
-// signal stuff
-void demux_register_signal(Demux *d, int signal);
-
-void demux_deregister_signal(Demux *d, int signal);
-
-void demux_on_signal(Demux *d, int timeout, void *context, Demux_callback callback);
-*/
 
