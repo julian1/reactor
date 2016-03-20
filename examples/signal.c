@@ -19,10 +19,10 @@ Signal *d;
 static void signal_callback(void *context, SignalEvent *e)
 {
     switch(e->type) {
-      case READ_READY: {
+      case SIGNAL_SIGNAL: {
           static int count = 0;
           fprintf(stdout, "got signal %d\n", e->siginfo.si_signo );
-          if(count++ < 10) { 
+          if(count++ < 5) { 
               ///reactor_rebind_handler(e);
               signal_on_signal(d, -1, NULL, signal_callback);
           } else {
