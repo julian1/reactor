@@ -2,22 +2,39 @@
 typedef struct Reactor Reactor;
 
 typedef enum {
-    OK,
+    READ_READY,
+    WRITE_READY,
     EXCEPTION,
     TIMEOUT,
     CANCELLED,
+    // SIGNAL...
 } Reactor_event_type;
 
 
 typedef struct Event Event;
+
+typedef void (*Reactor_callback)(void *context, Event *);
+
+typedef struct Handler Handler;
+
 struct Event
 {
-    Reactor_event_type   type;
-    Reactor  *reactor;
-    int         timeout;    // associated with handler, not just timer, can make rebinding easier
+    Reactor_event_type type;
+    Reactor     *reactor;
+
+    Handler     *handler;   // opaque to caller space, but enables rebinding...
+
+    // this mostly duplicates  handler, but makes it easier for end user ..
     int         fd;         // for socket,stdin,file,device etc
+    int         timeout;    // associated with handler, not just timer, can make rebinding easier
     int         signal;     // for signals
+/*
+    // support for rebinding...
+    void        *context;
+    Reactor_callback callback; 
+*/
 };
+
 
 // TODO better prefixes for enum values...
 
@@ -30,9 +47,6 @@ typedef enum {
     LOG_FATAL,
     LOG_NONE
 } Reactor_log_level;
-
-
-typedef void (*Reactor_callback)(void *context, Event *);
 
 
 
@@ -63,6 +77,8 @@ void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback c
 void reactor_on_read_ready( Reactor *d, int fd, int timeout, void *context, Reactor_callback callback);
 
 void reactor_on_write_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback);
+
+// void reactor_rebind_handler(Event *e);
 
 // signal stuff
 void reactor_register_signal(Reactor *d, int signal);

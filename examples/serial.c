@@ -60,7 +60,7 @@ static void on_read_device(Context *context, Event *e)
     assert(context->device_fd == e->fd);
 
     switch(e->type) {
-        case OK: {
+        case READ_READY: {
             char buf[1000];
             int n = read(e->fd, &buf, 1000);
             //fprintf(stdout, "Got %d chars from device\n", n);
@@ -87,7 +87,7 @@ static void on_read_device(Context *context, Event *e)
 static void on_read_stdin(Context *context, Event *e)
 {
     switch(e->type) {
-        case OK: {
+        case READ_READY: {
             // not sure whether to do this here, or elsewhere...
             // also eof for disconnect if socket, but not always - eg. fill
             char buf[1000];

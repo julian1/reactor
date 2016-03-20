@@ -27,26 +27,17 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
-  - single combined the read/writ callback, and then type of event we're interested in...
-      - will simplify, and make rebind(e) possible.
-      - simultaneous read and write handler binding
-
   - maybe support cancelling individual handlers (lookup by fd and type)
     - or just return the handler for user to call action on?
   - rename d-> vars to r->
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
   - maybe move signal fifo handling outside pure reactor, also logging. more modular? delegate
-  - change name ureactor or udemux?
+  - maybe change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - signal deregistration
-  - issue with binding both read/write is that might want to cancel one in response to the other?
-      - reason to encode the action... rather
-      - makes cancelling, as easy as not rebinding
-  - fix device echo issue
+  - fix device echo issue with serial comms
       READ_READY, WRITE_READY, EXCEPTION, TIMEOUT, CANCELLED
   - investigate - for proactor ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
-  - example simple serial comms
-    - ioctl tty_ioctl set baud, rts, dtr
   - network examples
     - http
     - dns
@@ -54,7 +45,14 @@
   - better enum variable prefixes
 
 #### DONE
-
+  - done - combine the read/writ callback, then type the event we're interested in
+      - will simplify, and make rebind(e) possible.
+      - simultaneous read and write handler binding
+  - done - issue with binding both read/write is may want to cancel one in response to the other?
+      - reason to encode the action... rather
+      - makes cancelling, as easy as not rebinding
+  - done - example simple serial comms
+    - ioctl tty_ioctl set baud, rts, dtr
   - done - get bind() and listen() and check that can spawn new contexts easily
   - done - fix cancel_all
     - make it easy to do a cancel/shutdown from any callback

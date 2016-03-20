@@ -20,17 +20,23 @@
 
 #include <reactor.h>
 
+typedef enum {
+    INTEREST_READ,
+    INTEREST_WRITE,
+    // INTEREST_RW,
+    INTEREST_TIMEOUT // none...
+} Reactor_interest_type;
 
-static void event_init(Event *e)
-{
-    memset(e, 0, sizeof(Event));
-}
+
 
 
 typedef struct Handler Handler;
 struct Handler
 {
     Handler     *next;
+
+    Reactor_interest_type type;
+
     int         fd;
     int         timeout;    // in millisecs
 
@@ -39,9 +45,9 @@ struct Handler
 
     bool        cancelled;
 
+  // user data
     void        *context;
-    void        (*read_callback)(void *context, Event *);
-    void        (*write_callback)(void *context, Event *);
+    void        (*callback)(void *context, Event *);
 };
 
 
@@ -58,6 +64,20 @@ struct Reactor
     int         signal_fifo_readfd;
 };
 
+
+
+static void init_event_from_handler(Reactor *d, Reactor_event_type type, Handler *h, Event *e)
+{
+    memset(e, 0, sizeof(Event));
+    e->reactor = d;
+    e->type = type;
+    e->handler = h;
+
+    // copy some values out of the handler as convenience to user
+    e->fd = h->fd;         
+    e->timeout = h->timeout; 
+    // int         signal;     // should be in signal user-context?
+}
 
 
 // Uggh, must be static as neither sa_handler or sa_sigaction support contexts
@@ -133,10 +153,13 @@ void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
 }
 
 
-static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *context)
+static Handler *reactor_create_handler(Reactor *d, Reactor_interest_type type, int fd, int timeout, void *context, Reactor_callback callback)
 {
     Handler *h = (Handler *)malloc(sizeof(Handler));
     memset(h, 0, sizeof(Handler));
+
+    h->type = type;
+
     h->fd = fd;
     // we don't really need to record both, but s
     h->timeout = timeout;
@@ -155,6 +178,7 @@ static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *co
     }
 
     h->context = context;
+    h->callback = callback;
 
     // tack onto the new handler list
     h->next = d->new;
@@ -166,25 +190,31 @@ static Handler *reactor_create_handler(Reactor *d, int fd, int timeout, void *co
 
 void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback callback)
 {
-    Handler *h = reactor_create_handler( d, -1234, timeout, context);
-    // appropriate the read_callback.
-    h->read_callback = callback;
+    reactor_create_handler(d, INTEREST_TIMEOUT, -1234, timeout, context, callback);
 }
 
 
 void reactor_on_read_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback)
 {
-    Handler *h = reactor_create_handler( d, fd, timeout, context);
-    h->read_callback = callback;
+    reactor_create_handler(d, INTEREST_READ, fd, timeout, context, callback);
 }
 
 
 void reactor_on_write_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback)
 {
-    Handler *h = reactor_create_handler( d, fd, timeout, context);
-    h->write_callback = callback;
+    reactor_create_handler(d, INTEREST_WRITE, fd, timeout, context, callback);
 }
 
+/*
+void reactor_rebind_handler(Event *e)
+{
+    // doesn't work with signals... because of inner context?
+    assert(e->reactor);
+    Handler *h = e->handler;
+    assert(h);
+    reactor_create_handler(e->reactor, h->type, h->fd, h->timeout, h->context, h->callback);
+}
+*/
 
 static int handler_count(Handler *l)
 {
@@ -203,7 +233,7 @@ void reactor_cancel_all(Reactor *d)
 }
 
 // IMPORTANT - THE ONLY PLACE WE TRAVERSE THE LISTS SHOULD BE run_once()
-// might want some magic number checks... to check memory... 
+// might want some magic number checks... to check memory...
 
 
 void reactor_run(Reactor *d)
@@ -238,43 +268,25 @@ int reactor_run_once(Reactor *d)
         d->cancel_all_handlers = false;
     }
 
-    // TODO not sure if we shouldn't remove the cancelled flag, since there is 
-    // no way to access other handlers from a callback
-    // instead construct a list of cancelled... 
-
-    // IMPORTANT: OR - simply return an actual handler when do a bind? 
-    // and let the end user arrange a cancel. 
-    // very simple
-
     // processed cancelled handlers
     {
-        // using process lists makes it easier to log, and cleanup, and avoids processing status booleans
+        // using process lists makes it easier to log, and cleanup, and avoids needing to
+        // keep status booleans
         Handler *unchanged = NULL;
         Handler *cancelled = NULL;
         Handler *next = NULL;
         Handler *current = d->current;
         d->current = NULL;
 
+        // call any cancelled handlers
         for(Handler *h = current; h; h = next) {
 
             next = h->next;
             if(h->cancelled) {
                 Event e;
-                event_init(&e);
-                e.reactor = d;
-                e.timeout = h->timeout;
-                e.fd = h->fd;
-                e.type = CANCELLED;
-
+                init_event_from_handler(d, CANCELLED, h, &e);
                 reactor_log(d, LOG_DEBUG, "fd %d cancelled", h->fd);
-
-                if(h->read_callback)
-                  h->read_callback(h->context, &e);
-                else if(h->write_callback)
-                  h->write_callback(h->context, &e);
-                else
-                  assert(0);
-
+                h->callback(h->context, &e);
                 h->next = cancelled;
                 cancelled = h;
             }
@@ -307,7 +319,6 @@ int reactor_run_once(Reactor *d)
         }
     }
 
-
     // create file descriptor watch sets
     fd_set readfds, writefds, exceptfds;
     FD_ZERO(&readfds);
@@ -321,11 +332,12 @@ int reactor_run_once(Reactor *d)
             // we always want to know about exceptions or out-of-band events
             FD_SET(h->fd, &exceptfds);
 
-            if(h->read_callback) {
+            if(h->type == INTEREST_READ) {
                 FD_SET(h->fd, &readfds);
-            }
-            else if(h->write_callback) {
+            } else if(h->type == INTEREST_WRITE) {
                 FD_SET(h->fd, &writefds);
+            } else if(h->type == INTEREST_TIMEOUT) {
+                ;
             } else {
                 assert(0);
             }
@@ -341,7 +353,7 @@ int reactor_run_once(Reactor *d)
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
 
-    // adjust select() timeout for the next handler that could possibly timeout
+    // adjust select() timeout down for next possible handler that could timeout
     {
         struct timeval now;
 
@@ -355,7 +367,7 @@ int reactor_run_once(Reactor *d)
                 struct timeval remaining;
                 timersub(&h->timeout_time, &now, &remaining);
                 if(timercmp(&remaining, &timeout, <)) {
-                    timeout = remaining; // struct assign or memcpy...
+                    timeout = remaining; // struct assign or memcpy()...
                 }
             }
         }
@@ -399,65 +411,44 @@ int reactor_run_once(Reactor *d)
 
             next = h->next;
 
-            // construct basic event info
-            Event e;
-            event_init(&e);
-            e.timeout = h->timeout;
-            e.reactor = d;
-            e.fd = h->fd;
+            // logic is clearer with explicit h->fd >= 0 testing in if/else chain..
 
             if(h->fd >= 0 && FD_ISSET(h->fd, &exceptfds)) {
-
-                // test exception conditions first
+                // exceptions get priority
                 reactor_log(d, LOG_INFO, "fd %d exception", h->fd);
-                e.type = EXCEPTION;
-                if(h->read_callback)
-                  h->read_callback(h->context, &e);
-                else if(h->write_callback)
-                  h->write_callback(h->context, &e);
-                else
-                  assert(0);
-
-                // transfer handler to processed list
+                Event e;
+                init_event_from_handler(d, EXCEPTION, h, &e);
+                h->callback(h->context, &e);
                 h->next = processed;
                 processed = h;
             }
-            else if(h->fd >= 0 && h->read_callback && FD_ISSET(h->fd, &readfds)) {
-
+            else if(h->fd >= 0 && h->type == INTEREST_READ && FD_ISSET(h->fd, &readfds)) {
                 reactor_log(d, LOG_DEBUG, "fd %d is ready for reading", h->fd);
-                e.type = OK;
-                h->read_callback(h->context, &e);
-                // transfer handler to processed list
+                Event e;
+                init_event_from_handler(d, READ_READY, h, &e);
+                h->callback(h->context, &e);
                 h->next = processed;
                 processed = h;
             }
-            else if(h->fd >= 0 && h->write_callback && FD_ISSET(h->fd, &writefds)) {
-
+            else if(h->fd >= 0 && h->type == INTEREST_WRITE && FD_ISSET(h->fd, &writefds)) {
                 reactor_log(d, LOG_DEBUG, "fd %d is ready for writing", h->fd);
-                e.type = OK;
-                h->write_callback(h->context, &e);
-                // transfer handler to processed list
+                Event e;
+                init_event_from_handler(d, WRITE_READY, h, &e);
+                h->callback(h->context, &e);
                 h->next = processed;
                 processed = h;
             }
             else if(h->timeout >= 0 && timercmp(&now, &h->timeout_time, >=)) {
-
+                // specify timeout, either fd or non-fd
                 reactor_log(d, LOG_DEBUG, "fd %d timed out", h->fd);
-                e.type = TIMEOUT;
-                if(h->read_callback)
-                  h->read_callback(h->context, &e);
-                else if(h->write_callback)
-                  h->write_callback(h->context, &e);
-                else {
-                  assert(0);
-                }
-                // transfer handler to processed list
+                Event e;
+                init_event_from_handler(d, TIMEOUT, h, &e);
+                h->callback(h->context, &e);
                 h->next = processed;
                 processed = h;
             }
             else {
-
-                // nothing changed for handler - transfer handler to un-processed list
+                // no changes - transfer handler to un-processed list
                 h->next = unchanged;
                 unchanged = h;
             }
@@ -466,7 +457,7 @@ int reactor_run_once(Reactor *d)
         // TODO could log the list of fds for each list...
         reactor_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
         reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
-        
+
         assert(d->current == NULL);
 
         // free processed handler mem
@@ -494,7 +485,7 @@ int reactor_run_once(Reactor *d)
 /*
     Signal/interupt handling
     strategy is to push interupt details onto a unnamed fifo pipe, and then
-    read them again in the desired handler/thread context
+    read again in the desired handler/thread context
 */
 
 typedef struct SignalDetail SignalDetail;
@@ -550,7 +541,7 @@ struct SignalContext
 static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
 {
     switch(e->type) {
-        case OK: {
+        case READ_READY: {
             SignalDetail s;
             if(read(e->fd, &s, sizeof(SignalDetail)) == sizeof(SignalDetail))  {
                 // fprintf(stdout, "got signal %d\n", s.signal);
@@ -573,7 +564,7 @@ static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
         case CANCELLED:
             (sc->callback)(sc->context, e);
             break;
-        default:
+        case WRITE_READY:
             assert(0);
     }
 

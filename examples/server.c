@@ -110,7 +110,7 @@ static void conn_destroy(Conn *conn)
 static void conn_on_read_ready(Conn *conn, Event *e)
 {
     switch(e->type) {
-        case OK: {
+        case READ_READY: {
             fprintf(stdout, "conn ok\n");
             char buf[1000];
             int n = read(e->fd, &buf, 1000);
@@ -132,6 +132,7 @@ static void conn_on_read_ready(Conn *conn, Event *e)
             conn_destroy(conn);
             break;
         case TIMEOUT:
+        case WRITE_READY:
             assert(0);
     }
 }
@@ -140,7 +141,7 @@ static void conn_on_read_ready(Conn *conn, Event *e)
 static void server_on_accept_ready(Server *server, Event *e)
 {
     switch(e->type) {
-        case OK: {
+        case READ_READY: {
             struct sockaddr_in cli_addr;
             socklen_t  clilen;
 
@@ -168,6 +169,7 @@ static void server_on_accept_ready(Server *server, Event *e)
             server_destroy(server);
             break;
         case TIMEOUT:
+        case WRITE_READY:
             assert(0);
     }
 }
@@ -176,7 +178,8 @@ static void server_on_accept_ready(Server *server, Event *e)
 static void signal_callback(Server *server, Event *e)
 {
     switch(e->type) {
-        case OK: {
+        // TODO, READ_READY not quite right for signals
+        case READ_READY: {
             fprintf(stdout, "signal caught %d, cancel all\n", e->signal);
             reactor_cancel_all(e->reactor);
             break;

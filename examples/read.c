@@ -10,7 +10,7 @@
 static void on_read_ready(void *context, Event *e)
 {
     switch(e->type) {
-      case OK: {
+      case READ_READY: {
           char buf[1000];
           int n = read(e->fd, &buf, 1000);
           fprintf(stdout, "read %d chars\n", n);

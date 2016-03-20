@@ -18,10 +18,11 @@
 static void signal_callback(void *context, Event *e)
 {
     switch(e->type) {
-      case OK: {
+      case READ_READY: {
           static int count = 0;
           fprintf(stdout, "got signal %d\n", e->signal);
           if(count++ < 10) { 
+              ///reactor_rebind_handler(e);
               reactor_on_signal(e->reactor, e->timeout, NULL, signal_callback);
           } else {
             fprintf(stdout, "finishing\n");
