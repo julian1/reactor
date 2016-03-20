@@ -1,8 +1,5 @@
-
 /*
-    - rather than have lots of freestanding functions...
-    should use structs of function pointers?
-    - and then a simple wrapper over them?
+    just a facade over the logger, demux, and signal handling functions
 */
 #include <stdlib.h>
 #include <string.h>
@@ -16,8 +13,7 @@ typedef struct Reactor
     Demux   *demux;
     Signal  *signal;
 
-}
-Reactor;
+} Reactor;
 
 Reactor *reactor_create()
 {
@@ -47,8 +43,6 @@ void reactor_run(Reactor *u)
     demux_run(u->demux); 
 }
 
-
-
 void reactor_cancel_all(Reactor *r)
 {
     demux_cancel_all(r->demux);
@@ -58,7 +52,6 @@ void reactor_on_timer(Reactor *r, int timeout, void *context, Demux_callback cal
 {
     demux_on_timer(r->demux, timeout, context, callback);
 }
-
 
 void reactor_on_read_ready( Reactor *u, int fd, int timeout, void *context, Demux_callback callback)
 {

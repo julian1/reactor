@@ -70,7 +70,7 @@ struct Demux
 static void init_event_from_handler(Demux *d, Demux_event_type type, Handler *h, Event *e)
 {
     memset(e, 0, sizeof(Event));
-    e->demux = d;
+    // e->demux = d;
     e->type = type;
     e->handler = h;
 
