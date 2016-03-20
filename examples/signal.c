@@ -44,12 +44,9 @@ static void signal_callback(void *context, SignalEvent *e)
 int main()
 {
     r = reactor_create();
-
     reactor_register_signal(r, 2 );  // SIGINT, ctrl-c
     reactor_register_signal(r, 20 ); // SIGTSTP, ctrl-z
     reactor_on_signal(r, -1, NULL, signal_callback);
-    // reactor_on_signal(Reactor *, int timeout, void *context, Signal_callback callback);
-
     reactor_run(r);
     reactor_destroy(r);
 
