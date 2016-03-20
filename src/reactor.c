@@ -37,6 +37,11 @@ void reactor_destroy(Reactor *u)
     free(u);
 }
 
+int reactor_run_once(Reactor *r)
+{
+    return demux_run_once(r->demux); 
+}
+
 void reactor_run(Reactor *u)
 {
     demux_run(u->demux); 
