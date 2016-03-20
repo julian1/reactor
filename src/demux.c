@@ -1,7 +1,6 @@
 
 #include <stdio.h>
 #include <fcntl.h>
-//#include <unistd.h>
 #include <sys/select.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,22 +9,18 @@
 #include <time.h>
 #include <stdarg.h>
 #include <sys/time.h>
-//#include <linux/stat.h>
-//#include <signal.h>
 #include <stdbool.h> // c99
-
 
 #include <logger.h>
 #include <demux.h>
 
+
 typedef enum {
-    INTEREST_READ,   // change name DEMUX_READ
+    INTEREST_READ,   // change name DEMUX_RO, DEMUX_RW etc...
     INTEREST_WRITE,
     // INTEREST_RW,
     INTEREST_TIMEOUT // none...
 } Demux_interest_type;
-
-
 
 
 typedef struct Handler Handler;
@@ -52,22 +47,16 @@ struct Handler
 typedef struct Demux Demux;
 struct Demux
 {
-    // FILE        *logout;
-    // Demux_log_level log_level;
-
     Logger      *logger;
 
     Handler     *current;
     Handler     *new;
 
     bool        cancel_all_handlers;
-
 };
 
 
-
-// uggh shouldn't go here
-static void init_event_from_handler(Demux *d, Demux_event_type type, Handler *h, Event *e)
+static void init_event_from_handler(Demux *d, Demux_event_type type, Handler *h, Event *e) // rename?
 {
     memset(e, 0, sizeof(Event));
     // e->demux = d;
@@ -79,7 +68,6 @@ static void init_event_from_handler(Demux *d, Demux_event_type type, Handler *h,
     e->timeout = h->timeout; 
     // int         signal;     // should be in signal user-context?
 }
-
 
 
 Demux *demux_create(Logger *logger)
@@ -96,7 +84,6 @@ Demux *demux_create(Logger *logger)
 }
 
 
-
 void demux_destroy(Demux *d)
 {
     // IMPORTANT - does not destroy the logger!!!!
@@ -108,34 +95,11 @@ void demux_destroy(Demux *d)
         exit(EXIT_FAILURE);
     }
 
+    // TODO should check new handlers as well, otherwise the handler will memory leak
+
     memset(d, 0, sizeof(Demux));
     free(d);
 }
-
-/*
-void logger_log(Demux *d, Demux_log_level level, const char *format, ...)
-{
-    if(level >= d->log_level) {
-        va_list args;
-        va_start (args, format);
-
-        // fprintf(d->logout, "%s: ", getTimexceptfdstamp());
-        const char *s_level = NULL;
-        switch(level) {
-          case LOG_DEBUG: s_level = "DEBUG"; break;
-          case LOG_INFO:  s_level = "INFO"; break;
-          case LOG_WARN:  s_level = "WARN"; break;
-          case LOG_FATAL: s_level = "FATAL"; break;
-          default: assert(0);
-        };
-        fprintf(d->logout, "%s: ", s_level);
-        vfprintf(d->logout, format, args);
-        va_end (args);
-        fprintf(d->logout, "\n");
-        fflush(d->logout);
-    }
-}
-*/
 
 
 static Handler *demux_create_handler(Demux *d, Demux_interest_type type, int fd, int timeout, void *context, Demux_callback callback)
@@ -190,6 +154,7 @@ void demux_on_write_ready(Demux *d, int fd, int timeout, void *context, Demux_ca
     demux_create_handler(d, INTEREST_WRITE, fd, timeout, context, callback);
 }
 
+
 /*
 void demux_rebind_handler(Event *e)
 {
@@ -217,9 +182,6 @@ void demux_cancel_all(Demux *d)
     d->cancel_all_handlers = true;
 }
 
-// IMPORTANT - THE ONLY PLACE WE TRAVERSE THE LISTS SHOULD BE run_once()
-// might want some magic number checks... to check memory...
-
 
 void demux_run(Demux *d)
 {
@@ -229,9 +191,11 @@ void demux_run(Demux *d)
 
 int demux_run_once(Demux *d)
 {
+    // IMPORTANT - due to pointer manipulation THE ONLY PLACE WE TRAVERSE THE LISTS SHOULD BE run_once()
+    // might want some magic number checks... to check memory...
+
     logger_log(d->logger, LOG_DEBUG, "current : %d", handler_count(d->current));
     logger_log(d->logger, LOG_DEBUG, "new: %d", handler_count(d->current));
-
 
     // transfer new handlers to current list
     if(d->current) {
@@ -243,7 +207,6 @@ int demux_run_once(Demux *d)
         d->current = d->new;
     }
     d->new = NULL;
-
 
     // mark handlers to be cancelled
     if(d->cancel_all_handlers) {
@@ -331,7 +294,6 @@ int demux_run_once(Demux *d)
                 max_fd = h->fd;
         }
     }
-
 
     // workout the select() timeout - default of 10 seconds
     struct timeval timeout;
