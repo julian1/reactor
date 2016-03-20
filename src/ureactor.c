@@ -13,7 +13,7 @@
 typedef struct UReactor 
 {
     Logger  *logger; 
-    Reactor *reactor;  // change name core...
+    Demux   *demux;
     Signal  *signal;
 
 }
@@ -24,14 +24,14 @@ UReactor *ureactor_create()
     UReactor *u = (void *)malloc(sizeof(UReactor));
     memset(u, 0, sizeof(UReactor));
     u->logger = logger_create(stdout, LOG_INFO);
-    u->reactor = reactor_create(u->logger);
-    u->signal = signal_create(u->logger, u->reactor);
+    u->demux = demux_create(u->logger);
+    u->signal = signal_create(u->logger, u->demux);
     return u;
 }
 
 void ureactor_destroy(UReactor *u)
 {
-    reactor_destroy(u->reactor);
+    demux_destroy(u->demux);
     logger_destroy(u->logger);
     memset(u, 0, sizeof(UReactor));
     free(u);
@@ -39,12 +39,12 @@ void ureactor_destroy(UReactor *u)
 
 void ureactor_run(UReactor *u)
 {
-    reactor_run(u->reactor); 
+    demux_run(u->demux); 
 }
 
-void ureactor_on_read_ready( UReactor *u, int fd, int timeout, void *context, Reactor_callback callback)
+void ureactor_on_read_ready( UReactor *u, int fd, int timeout, void *context, Demux_callback callback)
 {
-    reactor_on_read_ready(u->reactor, fd, timeout, context, callback); 
+    demux_on_read_ready(u->demux, fd, timeout, context, callback); 
 }
 
 

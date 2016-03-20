@@ -15,25 +15,25 @@
 */
 
 // Uggh, must be static as neither sa_handler or sa_sigaction support contexts
-// Current limitation that can only have one reactor
+// Current limitation that can only have one demux
 static int signal_fifo_writefd;
 
 
 struct Signal
 {
     Logger      *logger;
-    Reactor     *reactor;
+    Demux     *demux;
     int         signal_fifo_readfd;
 };
 
 
-Signal *signal_create(Logger *logger, Reactor *reactor)
+Signal *signal_create(Logger *logger, Demux *demux)
 {
     Signal *s = (void *)malloc(sizeof(Signal));
     memset(s, 0, sizeof(Signal));
 
     s->logger = logger;
-    s->reactor = reactor;
+    s->demux = demux;
     
     // set up signal fifo
     int fd[2];
@@ -166,7 +166,7 @@ void signal_on_signal(Signal *d, int timeout, void *context, Signal_callback cal
     // sc->signal = signal;
     sc->context = context;
     sc->callback = callback;
-    reactor_on_read_ready( d->reactor, d->signal_fifo_readfd, timeout, sc,    
+    demux_on_read_ready( d->demux, d->signal_fifo_readfd, timeout, sc,    
         (void (*)(void *, Event *))signal_on_signal_fifo_read_ready);
 }
 

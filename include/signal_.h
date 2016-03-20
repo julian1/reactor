@@ -2,13 +2,13 @@
 // does 
 
 #include <logger.h>
-#include <reactor.h>
+#include <demux.h>
 
 #include <signal.h>
 
 typedef struct Signal Signal;
 
-Signal *signal_create(Logger *, Reactor *);
+Signal *signal_create(Logger *, Demux *);
 
 void signal_destroy(Signal *);
 

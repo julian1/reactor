@@ -16,14 +16,14 @@
 
 
 #include <logger.h>
-#include <reactor.h>
+#include <demux.h>
 
 typedef enum {
-    INTEREST_READ,
+    INTEREST_READ,   // change name DEMUX_READ
     INTEREST_WRITE,
     // INTEREST_RW,
     INTEREST_TIMEOUT // none...
-} Reactor_interest_type;
+} Demux_interest_type;
 
 
 
@@ -33,7 +33,7 @@ struct Handler
 {
     Handler     *next;
 
-    Reactor_interest_type type;
+    Demux_interest_type type;
 
     int         fd;
     int         timeout;    // in millisecs
@@ -49,11 +49,11 @@ struct Handler
 };
 
 
-typedef struct Reactor Reactor;
-struct Reactor
+typedef struct Demux Demux;
+struct Demux
 {
     // FILE        *logout;
-    // Reactor_log_level log_level;
+    // Demux_log_level log_level;
 
     Logger      *logger;
 
@@ -67,10 +67,10 @@ struct Reactor
 
 
 // uggh shouldn't go here
-static void init_event_from_handler(Reactor *d, Reactor_event_type type, Handler *h, Event *e)
+static void init_event_from_handler(Demux *d, Demux_event_type type, Handler *h, Event *e)
 {
     memset(e, 0, sizeof(Event));
-    e->reactor = d;
+    e->demux = d;
     e->type = type;
     e->handler = h;
 
@@ -82,10 +82,10 @@ static void init_event_from_handler(Reactor *d, Reactor_event_type type, Handler
 
 
 
-Reactor *reactor_create(Logger *logger)
+Demux *demux_create(Logger *logger)
 {
-    Reactor *d = malloc(sizeof(Reactor));
-    memset(d, 0, sizeof(Reactor));
+    Demux *d = malloc(sizeof(Demux));
+    memset(d, 0, sizeof(Demux));
     // d->logout = stdout;
     // d->log_level = level;
     d->logger = logger;
@@ -97,7 +97,7 @@ Reactor *reactor_create(Logger *logger)
 
 
 
-void reactor_destroy(Reactor *d)
+void demux_destroy(Demux *d)
 {
     // IMPORTANT - does not destroy the logger!!!!
 
@@ -108,12 +108,12 @@ void reactor_destroy(Reactor *d)
         exit(EXIT_FAILURE);
     }
 
-    memset(d, 0, sizeof(Reactor));
+    memset(d, 0, sizeof(Demux));
     free(d);
 }
 
 /*
-void logger_log(Reactor *d, Reactor_log_level level, const char *format, ...)
+void logger_log(Demux *d, Demux_log_level level, const char *format, ...)
 {
     if(level >= d->log_level) {
         va_list args;
@@ -138,7 +138,7 @@ void logger_log(Reactor *d, Reactor_log_level level, const char *format, ...)
 */
 
 
-static Handler *reactor_create_handler(Reactor *d, Reactor_interest_type type, int fd, int timeout, void *context, Reactor_callback callback)
+static Handler *demux_create_handler(Demux *d, Demux_interest_type type, int fd, int timeout, void *context, Demux_callback callback)
 {
     Handler *h = (Handler *)malloc(sizeof(Handler));
     memset(h, 0, sizeof(Handler));
@@ -173,31 +173,31 @@ static Handler *reactor_create_handler(Reactor *d, Reactor_interest_type type, i
 }
 
 
-void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback callback)
+void demux_on_timer(Demux *d, int timeout, void *context, Demux_callback callback)
 {
-    reactor_create_handler(d, INTEREST_TIMEOUT, -1234, timeout, context, callback);
+    demux_create_handler(d, INTEREST_TIMEOUT, -1234, timeout, context, callback);
 }
 
 
-void reactor_on_read_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback)
+void demux_on_read_ready(Demux *d, int fd, int timeout, void *context, Demux_callback callback)
 {
-    reactor_create_handler(d, INTEREST_READ, fd, timeout, context, callback);
+    demux_create_handler(d, INTEREST_READ, fd, timeout, context, callback);
 }
 
 
-void reactor_on_write_ready(Reactor *d, int fd, int timeout, void *context, Reactor_callback callback)
+void demux_on_write_ready(Demux *d, int fd, int timeout, void *context, Demux_callback callback)
 {
-    reactor_create_handler(d, INTEREST_WRITE, fd, timeout, context, callback);
+    demux_create_handler(d, INTEREST_WRITE, fd, timeout, context, callback);
 }
 
 /*
-void reactor_rebind_handler(Event *e)
+void demux_rebind_handler(Event *e)
 {
     // doesn't work with signals... because of inner context?
-    assert(e->reactor);
+    assert(e->demux);
     Handler *h = e->handler;
     assert(h);
-    reactor_create_handler(e->reactor, h->type, h->fd, h->timeout, h->context, h->callback);
+    demux_create_handler(e->demux, h->type, h->fd, h->timeout, h->context, h->callback);
 }
 */
 
@@ -211,7 +211,7 @@ static int handler_count(Handler *l)
 }
 
 
-void reactor_cancel_all(Reactor *d)
+void demux_cancel_all(Demux *d)
 {
     logger_log(d->logger, LOG_INFO, "cancel_all()");
     d->cancel_all_handlers = true;
@@ -221,13 +221,13 @@ void reactor_cancel_all(Reactor *d)
 // might want some magic number checks... to check memory...
 
 
-void reactor_run(Reactor *d)
+void demux_run(Demux *d)
 {
-    while(reactor_run_once(d));
+    while(demux_run_once(d));
 }
 
 
-int reactor_run_once(Reactor *d)
+int demux_run_once(Demux *d)
 {
     logger_log(d->logger, LOG_DEBUG, "current : %d", handler_count(d->current));
     logger_log(d->logger, LOG_DEBUG, "new: %d", handler_count(d->current));
