@@ -1,7 +1,8 @@
 #!/bin/bash -x
 
-rm reactor.o examples/*.out
+rm logger.o reactor.o examples/*.out
 
+gcc -Wall -c logger.c -I./ -o logger.o
 gcc -Wall -c reactor.c -I./ -o reactor.o
 
 for i in examples/*.c; do

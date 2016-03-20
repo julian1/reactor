@@ -15,3 +15,5 @@ Logger *logger_create(FILE *logout, Logger_log_level level);
 
 void logger_destroy(Logger *);
 
+void logger_log(Logger *l, Logger_log_level level, const char *format, ...);
+
