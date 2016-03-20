@@ -16,12 +16,14 @@
 
 typedef struct Server 
 {
+    Reactor *reactor;
     int fd;
 } Server;
 
 
 typedef struct Conn
 {
+    Reactor *reactor;
     Server *server;
     int fd;
 } Conn;
@@ -116,7 +118,7 @@ static void conn_on_read_ready(Conn *conn, Event *e)
             int n = read(e->fd, &buf, 1000);
             if(n > 0)  {
                 fprintf(stdout, "conn read %d chars\n", n);
-                reactor_on_read_ready(e->reactor, e->fd, -1, conn, (Reactor_callback)conn_on_read_ready);
+                reactor_on_read_ready(conn->reactor, e->fd, -1, conn, (Demux_callback)conn_on_read_ready);
             } else {
                 fprintf(stdout, "conn endpoint hangup\n");
                 conn_destroy(conn);
@@ -154,10 +156,11 @@ static void server_on_accept_ready(Server *server, Event *e)
                 fprintf(stdout, "server accept, spawning conn fd %d\n", fd);
                 Conn *conn = conn_create();
                 conn->server = server;
+                conn->reactor = server->reactor;
                 conn->fd = fd;
-                reactor_on_read_ready(e->reactor, conn->fd, -1, conn, (Reactor_callback)conn_on_read_ready);
+                reactor_on_read_ready(server->reactor, conn->fd, -1, conn, (Demux_callback)conn_on_read_ready);
             }
-            reactor_on_read_ready(e->reactor, server->fd, -1, server, (Reactor_callback)server_on_accept_ready);
+            reactor_on_read_ready(server->reactor, server->fd, -1, server, (Demux_callback)server_on_accept_ready);
             break;
         }
         case CANCELLED:
@@ -175,13 +178,13 @@ static void server_on_accept_ready(Server *server, Event *e)
 }
 
 
-static void signal_callback(Server *server, Event *e)
+static void signal_callback(Server *server, SignalEvent *e)
 {
     switch(e->type) {
         // TODO, READ_READY not quite right for signals
         case READ_READY: {
-            fprintf(stdout, "signal caught %d, cancel all\n", e->signal);
-            reactor_cancel_all(e->reactor);
+            fprintf(stdout, "signal caught %d, cancel all\n", e->siginfo.si_signo);
+            reactor_cancel_all(server->reactor);
             break;
         }
         default:
@@ -192,16 +195,16 @@ static void signal_callback(Server *server, Event *e)
 
 int main(int argc, char *argv[])
 {
-    Reactor *r = reactor_create( );
  
     Server *server = server_create();
+    server->reactor = reactor_create();
     server->fd = start_accepting(); 
 
-    reactor_register_signal(r, 2);  // SIGINT, ctrl-c
-    reactor_on_signal(r, -1, server, (Reactor_callback)signal_callback);
+    reactor_register_signal(server->reactor, 2);  // SIGINT, ctrl-c
+    reactor_on_signal(server->reactor, -1, server, (Signal_callback)signal_callback);
 
-    reactor_on_read_ready(r, server->fd, -1, server, (Reactor_callback)server_on_accept_ready);
-    reactor_run(r);
+    reactor_on_read_ready(server->reactor, server->fd, -1, server, (Demux_callback)server_on_accept_ready);
+    reactor_run(server->reactor);
 
      return 0; 
 }

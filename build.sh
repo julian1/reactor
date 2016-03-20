@@ -1,10 +1,13 @@
 #!/bin/bash -x
 
-rm reactor.o examples/*.out
+rm src/*.o examples/*.out
 
-gcc -Wall -c reactor.c -I./ -o reactor.o
+for i in src/*.c; do
+  gcc -Wall $i -c -I./include -o "${i%.c}.o" || exit
+done
 
 for i in examples/*.c; do
-  gcc -Wall $i reactor.o -I./ -o "${i%.c}.out"
+#for i in examples/read.c examples/signal.c examples/timeout.c examples/server.c; do
+  gcc -Wall $i src/*.o  -I./include -o "${i%.c}.out" || exit
 done
 

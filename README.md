@@ -35,13 +35,10 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
-  - rename d-> vars to r->
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
-  - maybe rename ureactor or udemux?
   - maybe rename to use lowercase underscore t
   - maybe support cancelling individual handlers (lookup by fd and type)
     - or just return the handler for user to call action on?
-  - maybe move signal fifo handling outside pure reactor, also logging. more modular? delegate
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - signal deregistration
   - fix device echo issue with serial comms
@@ -53,6 +50,10 @@
   - better enum variable prefixes - eg. prefix with 'reactor'
 
 #### DONE
+
+  - done - move signal fifo handling outside pure reactor, also logging. for modularity. delegate
+  - no - rename d-> vars to r->
+  - no - maybe rename ureactor or udemux?
   - done - combine the read/writ callback, then type the event we're interested in
       - will simplify, and make rebind(e) possible.
       - simultaneous read and write handler binding

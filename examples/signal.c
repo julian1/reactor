@@ -15,15 +15,15 @@
 #include <reactor.h>
 
 
-static void signal_callback(void *context, Event *e)
+static void signal_callback(Reactor *r, SignalEvent *e)
 {
     switch(e->type) {
-      case READ_READY: {
+      case SIGNAL_SIGNAL: {
           static int count = 0;
-          fprintf(stdout, "got signal %d\n", e->signal);
-          if(count++ < 10) { 
+          fprintf(stdout, "got signal %d\n", e->siginfo.si_signo);
+          if(count++ < 5) { 
               ///reactor_rebind_handler(e);
-              reactor_on_signal(e->reactor, e->timeout, NULL, signal_callback);
+              reactor_on_signal(r, -1, r, (Signal_callback)signal_callback);
           } else {
             fprintf(stdout, "finishing\n");
           }
@@ -34,14 +34,15 @@ static void signal_callback(void *context, Event *e)
     }
 }
 
+
 int main()
 {
-    Reactor *d = reactor_create();
-    reactor_register_signal(d, 2 );  // SIGINT, ctrl-c
-    reactor_register_signal(d, 20 ); // SIGTSTP, ctrl-z
-    reactor_on_signal(d, -1, NULL, signal_callback);
-    reactor_run(d);
-    reactor_destroy(d);
+    Reactor *r = reactor_create();
+    reactor_register_signal(r, 2 );  // SIGINT, ctrl-c
+    reactor_register_signal(r, 20 ); // SIGTSTP, ctrl-z
+    reactor_on_signal(r, -1, r, (Signal_callback)signal_callback);
+    reactor_run(r);
+    reactor_destroy(r);
 
     return 0;
 }
