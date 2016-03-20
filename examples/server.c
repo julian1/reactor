@@ -192,7 +192,7 @@ static void signal_callback(Server *server, Event *e)
 
 int main(int argc, char *argv[])
 {
-    Reactor *r = reactor_create( );
+    Reactor *r = reactor_create_simple();
  
     Server *server = server_create();
     server->fd = start_accepting(); 

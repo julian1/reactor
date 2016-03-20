@@ -9,15 +9,13 @@
 #include <errno.h>
 #include <time.h>
 #include <stdarg.h>
-
 #include <sys/time.h>
-
-
 //#include <linux/stat.h>
 #include <signal.h>
-
 #include <stdbool.h> // c99
 
+
+#include <logger.h>
 #include <reactor.h>
 
 typedef enum {
@@ -54,8 +52,11 @@ struct Handler
 typedef struct Reactor Reactor;
 struct Reactor
 {
-    FILE        *logout;
-    Reactor_log_level log_level;
+    // FILE        *logout;
+    // Reactor_log_level log_level;
+
+    Logger      *logger;
+
     Handler     *current;
     Handler     *new;
 
@@ -66,6 +67,7 @@ struct Reactor
 
 
 
+// uggh shouldn't go here
 static void init_event_from_handler(Reactor *d, Reactor_event_type type, Handler *h, Event *e)
 {
     memset(e, 0, sizeof(Event));
@@ -85,18 +87,19 @@ static void init_event_from_handler(Reactor *d, Reactor_event_type type, Handler
 static int signal_fifo_writefd;
 
 
-Reactor *reactor_create_with_log_level(/* FILE *logout, */ Reactor_log_level level)
+Reactor *reactor_create(Logger *logger)
 {
     Reactor *d = malloc(sizeof(Reactor));
     memset(d, 0, sizeof(Reactor));
-    d->logout = stdout;
-    d->log_level = level;
-    reactor_log(d, LOG_INFO, "create");
+    // d->logout = stdout;
+    // d->log_level = level;
+    d->logger = logger;
+    logger_log(d->logger, LOG_INFO, "create");
 
     // set up signal fifo
     int fd[2];
     if(pipe(fd) < 0) {
-        reactor_log(d, LOG_FATAL, "pipe() failed '%s'", strerror(errno));
+        logger_log(d->logger, LOG_FATAL, "pipe() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
     d->signal_fifo_readfd = fd[0];
@@ -106,18 +109,30 @@ Reactor *reactor_create_with_log_level(/* FILE *logout, */ Reactor_log_level lev
 }
 
 
+Reactor *reactor_create_simple()
+{
+    Logger *logger = logger_create(stdout, LOG_INFO);
+    Reactor *reactor = reactor_create(logger);
+    return reactor;
+}
+j
+
+/*
 Reactor *reactor_create()
 {
     return reactor_create_with_log_level(LOG_INFO);
 }
+*/
 
 
 void reactor_destroy(Reactor *d)
 {
-    reactor_log(d, LOG_INFO, "destroy");
+    // IMPORTANT - does not destroy the logger!!!!
+
+    logger_log(d->logger, LOG_INFO, "destroy");
 
     if(d->current) {
-        reactor_log(d, LOG_FATAL, "destroy() called with unprocessed handlers");
+        logger_log(d->logger, LOG_FATAL, "destroy() called with unprocessed handlers");
         exit(EXIT_FAILURE);
     }
 
@@ -128,8 +143,8 @@ void reactor_destroy(Reactor *d)
     free(d);
 }
 
-
-void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
+/*
+void logger_log(Reactor *d, Reactor_log_level level, const char *format, ...)
 {
     if(level >= d->log_level) {
         va_list args;
@@ -151,6 +166,7 @@ void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...)
         fflush(d->logout);
     }
 }
+*/
 
 
 static Handler *reactor_create_handler(Reactor *d, Reactor_interest_type type, int fd, int timeout, void *context, Reactor_callback callback)
@@ -165,7 +181,7 @@ static Handler *reactor_create_handler(Reactor *d, Reactor_interest_type type, i
     h->timeout = timeout;
 
     if(gettimeofday(&h->start_time, NULL) < 0) {
-        reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
+        logger_log(d->logger, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -228,7 +244,7 @@ static int handler_count(Handler *l)
 
 void reactor_cancel_all(Reactor *d)
 {
-    reactor_log(d, LOG_INFO, "cancel_all()");
+    logger_log(d->logger, LOG_INFO, "cancel_all()");
     d->cancel_all_handlers = true;
 }
 
@@ -244,8 +260,8 @@ void reactor_run(Reactor *d)
 
 int reactor_run_once(Reactor *d)
 {
-    reactor_log(d, LOG_DEBUG, "current : %d", handler_count(d->current));
-    reactor_log(d, LOG_DEBUG, "new: %d", handler_count(d->current));
+    logger_log(d->logger, LOG_DEBUG, "current : %d", handler_count(d->current));
+    logger_log(d->logger, LOG_DEBUG, "new: %d", handler_count(d->current));
 
 
     // transfer new handlers to current list
@@ -285,7 +301,7 @@ int reactor_run_once(Reactor *d)
             if(h->cancelled) {
                 Event e;
                 init_event_from_handler(d, CANCELLED, h, &e);
-                reactor_log(d, LOG_DEBUG, "fd %d cancelled", h->fd);
+                logger_log(d->logger, LOG_DEBUG, "fd %d cancelled", h->fd);
                 h->callback(h->context, &e);
                 h->next = cancelled;
                 cancelled = h;
@@ -296,8 +312,8 @@ int reactor_run_once(Reactor *d)
             }
         }
 
-        reactor_log(d, LOG_DEBUG, "cancelled: %d", handler_count(cancelled));
-        reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
+        logger_log(d->logger, LOG_DEBUG, "cancelled: %d", handler_count(cancelled));
+        logger_log(d->logger, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
 
         d->current = unchanged;
 
@@ -313,7 +329,7 @@ int reactor_run_once(Reactor *d)
             // return immediately to avoid select() blocking where all handlers were cancelled
             int count = handler_count(d->current) + handler_count(d->new);
             if(count == 0) {
-                reactor_log(d, LOG_INFO, "no more handlers to process");
+                logger_log(d->logger, LOG_INFO, "no more handlers to process");
             }
             return count;
         }
@@ -358,7 +374,7 @@ int reactor_run_once(Reactor *d)
         struct timeval now;
 
         if(gettimeofday(&now, NULL) < 0) {
-            reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
+            logger_log(d->logger, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -382,18 +398,18 @@ int reactor_run_once(Reactor *d)
             return handler_count(d->current) + handler_count(d->new);
         }
         else {
-            reactor_log(d, LOG_FATAL, "select() failed '%s'", strerror(errno));
+            logger_log(d->logger, LOG_FATAL, "select() failed '%s'", strerror(errno));
             // TODO attempt cleanup by calling cancel??
             exit(EXIT_FAILURE);
         }
     }
     else {
-        reactor_log(d, LOG_DEBUG, "returned from select()");
+        logger_log(d->logger, LOG_DEBUG, "returned from select()");
 
         struct timeval now;
 
         if(gettimeofday(&now, NULL) < 0) {
-            reactor_log(d, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
+            logger_log(d->logger, LOG_FATAL, "gettimeofday() failed '%s'", strerror(errno));
             exit(EXIT_FAILURE);
         }
 
@@ -415,7 +431,7 @@ int reactor_run_once(Reactor *d)
 
             if(h->fd >= 0 && FD_ISSET(h->fd, &exceptfds)) {
                 // exceptions get priority
-                reactor_log(d, LOG_INFO, "fd %d exception", h->fd);
+                logger_log(d->logger, LOG_INFO, "fd %d exception", h->fd);
                 Event e;
                 init_event_from_handler(d, EXCEPTION, h, &e);
                 h->callback(h->context, &e);
@@ -423,7 +439,7 @@ int reactor_run_once(Reactor *d)
                 processed = h;
             }
             else if(h->fd >= 0 && h->type == INTEREST_READ && FD_ISSET(h->fd, &readfds)) {
-                reactor_log(d, LOG_DEBUG, "fd %d is ready for reading", h->fd);
+                logger_log(d->logger, LOG_DEBUG, "fd %d is ready for reading", h->fd);
                 Event e;
                 init_event_from_handler(d, READ_READY, h, &e);
                 h->callback(h->context, &e);
@@ -431,7 +447,7 @@ int reactor_run_once(Reactor *d)
                 processed = h;
             }
             else if(h->fd >= 0 && h->type == INTEREST_WRITE && FD_ISSET(h->fd, &writefds)) {
-                reactor_log(d, LOG_DEBUG, "fd %d is ready for writing", h->fd);
+                logger_log(d->logger, LOG_DEBUG, "fd %d is ready for writing", h->fd);
                 Event e;
                 init_event_from_handler(d, WRITE_READY, h, &e);
                 h->callback(h->context, &e);
@@ -440,7 +456,7 @@ int reactor_run_once(Reactor *d)
             }
             else if(h->timeout >= 0 && timercmp(&now, &h->timeout_time, >=)) {
                 // specify timeout, either fd or non-fd
-                reactor_log(d, LOG_DEBUG, "fd %d timed out", h->fd);
+                logger_log(d->logger, LOG_DEBUG, "fd %d timed out", h->fd);
                 Event e;
                 init_event_from_handler(d, TIMEOUT, h, &e);
                 h->callback(h->context, &e);
@@ -455,8 +471,8 @@ int reactor_run_once(Reactor *d)
         }
 
         // TODO could log the list of fds for each list...
-        reactor_log(d, LOG_DEBUG, "processed: %d", handler_count(processed));
-        reactor_log(d, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
+        logger_log(d->logger, LOG_DEBUG, "processed: %d", handler_count(processed));
+        logger_log(d->logger, LOG_DEBUG, "unchanged: %d", handler_count(unchanged));
 
         assert(d->current == NULL);
 
@@ -472,7 +488,7 @@ int reactor_run_once(Reactor *d)
         // do we have more handlers to process?
         int count = handler_count(d->current) + handler_count(d->new);
         if(count == 0) {
-            reactor_log(d, LOG_INFO, "no more handlers to process");
+            logger_log(d->logger, LOG_INFO, "no more handlers to process");
         }
 
         return count;
@@ -516,7 +532,7 @@ void reactor_register_signal( Reactor *d, int signal )
 
     int ret = sigaction(signal, &act, NULL);
     if(ret != 0) {
-        reactor_log(d, LOG_FATAL, "sigaction() failed '%s'", strerror(errno));
+        logger_log(d->logger, LOG_FATAL, "sigaction() failed '%s'", strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
@@ -557,7 +573,7 @@ static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
         }
         case EXCEPTION:
             // handle locally, instead of passing along...
-            reactor_log(e->reactor, LOG_FATAL, "exception on signal fifo '%s'", strerror(errno));
+            logger_log(e->reactor->logger, LOG_FATAL, "exception on signal fifo '%s'", strerror(errno));
             exit(EXIT_FAILURE);
             break;
         case TIMEOUT:

@@ -185,7 +185,7 @@ int main()
     set_modem_pin(context.device_fd, TIOCM_DTR, true); // gpio0, high = normal boot, low flash
     set_modem_pin(context.device_fd, TIOCM_RTS, true); // reset, high don't reset
 
-    Reactor *d = reactor_create();
+    Reactor *d = reactor_create_simple();
     if(true) {
         reactor_on_read_ready(d, context.device_fd, -1, &context, (void *)on_read_device);
         reactor_on_read_ready(d, 0, -1, &context, (void *)on_read_stdin);

@@ -48,7 +48,7 @@ static void on_timeout_2(void *context, Event *e)
 
 int main()
 {
-    Reactor *d = reactor_create();
+    Reactor *d = reactor_create_simple();
     reactor_on_timer(d, 200, NULL, (void *)on_timeout_1);
     reactor_on_timer(d, 1000, NULL, (void *)on_timeout_2);
     reactor_run(d);

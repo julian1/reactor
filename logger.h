@@ -1,8 +1,10 @@
+#pragma once
 
 #include <stdio.h>
 
 typedef struct Logger Logger;
 
+// ALL < DEBUG < INFO < WARN < ERROR < FATAL < OFF.
 typedef enum {
     LOG_DEBUG,
     LOG_INFO,

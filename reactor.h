@@ -1,3 +1,6 @@
+#pragma once
+
+#include <logger.h>
 
 typedef struct Reactor Reactor;
 
@@ -39,7 +42,7 @@ struct Event
 // TODO better prefixes for enum values...
 
 // ALL < DEBUG < INFO < WARN < ERROR < FATAL < OFF.
-
+/*
 typedef enum {
     LOG_DEBUG,
     LOG_INFO,
@@ -47,13 +50,15 @@ typedef enum {
     LOG_FATAL,
     LOG_NONE
 } Reactor_log_level;
-
+*/
 
 
 // setup and run
-Reactor * reactor_create();
+//Reactor * reactor_create();
 
-Reactor *reactor_create_with_log_level(Reactor_log_level level);
+Reactor *reactor_create(Logger *);
+
+Reactor *reactor_create_simple();
 
 void reactor_destroy(Reactor *);
 
@@ -63,7 +68,7 @@ void reactor_run(Reactor *d);
 
 void reactor_cancel_all(Reactor *d);
 
-void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...);
+// void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...);
 
 
 typedef struct Handler Handler;

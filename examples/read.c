@@ -39,7 +39,7 @@ static void on_read_ready(void *context, Event *e)
 int main()
 {
   int stdin_fd = 0;
-  Reactor *d = reactor_create();
+  Reactor *d = reactor_create_simple();
   reactor_on_read_ready(d, stdin_fd, -1, NULL, (void *)on_read_ready);
   // reactor_cancel_all(d);
   reactor_run(d);
