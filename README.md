@@ -35,7 +35,7 @@
     - or just return the handler for user to call action on?
   - rename d-> vars to r->
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
-  - maybe move signal fifo handling outside pure reactor
+  - maybe move signal fifo handling outside pure reactor, also logging. more modular? delegate
   - change name ureactor or udemux?
   - investigate if ok to mix fopen(stdout) with open(1) for logging... (better to use stderr?)
   - signal deregistration

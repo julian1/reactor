@@ -23,6 +23,12 @@
         http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux
         https://en.wikibooks.org/wiki/Serial_Programming/termios
         http://www.tldp.org/HOWTO/text/Serial-Programming-HOWTO
+
+        http://unix.stackexchange.com/questions/117037/how-to-send-data-to-a-serial-port-and-see-any-answer
+
+    netcat devcat /device cat...
+
+    maybe sending too much data? or need to convert CR to LF
 */
 
 #include <stdio.h>
