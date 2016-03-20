@@ -11,7 +11,7 @@
 #include <stdarg.h>
 #include <sys/time.h>
 //#include <linux/stat.h>
-#include <signal.h>
+//#include <signal.h>
 #include <stdbool.h> // c99
 
 
@@ -62,7 +62,6 @@ struct Reactor
 
     bool        cancel_all_handlers;
 
-    int         signal_fifo_readfd;
 };
 
 
@@ -82,10 +81,6 @@ static void init_event_from_handler(Reactor *d, Reactor_event_type type, Handler
 }
 
 
-// Uggh, must be static as neither sa_handler or sa_sigaction support contexts
-// Current limitation that can only have one reactor
-static int signal_fifo_writefd;
-
 
 Reactor *reactor_create(Logger *logger)
 {
@@ -96,28 +91,10 @@ Reactor *reactor_create(Logger *logger)
     d->logger = logger;
     logger_log(d->logger, LOG_INFO, "create");
 
-    // set up signal fifo
-    int fd[2];
-    if(pipe(fd) < 0) {
-        logger_log(d->logger, LOG_FATAL, "pipe() failed '%s'", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    d->signal_fifo_readfd = fd[0];
-    signal_fifo_writefd = fd[1];
 
     return d;
 }
 
-
-
-
-
-/*
-Reactor *reactor_create()
-{
-    return reactor_create_with_log_level(LOG_INFO);
-}
-*/
 
 
 void reactor_destroy(Reactor *d)
@@ -130,9 +107,6 @@ void reactor_destroy(Reactor *d)
         logger_log(d->logger, LOG_FATAL, "destroy() called with unprocessed handlers");
         exit(EXIT_FAILURE);
     }
-
-    close(d->signal_fifo_readfd);
-    close(signal_fifo_writefd);
 
     memset(d, 0, sizeof(Reactor));
     free(d);
@@ -489,114 +463,5 @@ int reactor_run_once(Reactor *d)
         return count;
     }
     assert(0);
-}
-
-/////////////////////////
-
-/*
-    Signal/interupt handling
-    strategy is to push interupt details onto a unnamed fifo pipe, and then
-    read again in the desired handler/thread context
-*/
-
-typedef struct SignalDetail SignalDetail;
-struct SignalDetail
-{
-    int signal;
-};
-
-
-static void reactor_sigaction(int signal, siginfo_t *siginfo, ucontext_t *ucontext)
-{
-    // fprintf(stdout, "my_sa_sigaction -> got signal %d from pid %d\n", signal, siginfo->si_pid);
-    SignalDetail s;
-    s.signal = signal;
-    write(signal_fifo_writefd, &s, sizeof(SignalDetail));
-}
-
-
-void reactor_register_signal( Reactor *d, int signal )
-{
-    struct sigaction act;
-    memset(&act, 0, sizeof(sigaction));
-
-    // Use sa_sigaction over sa_handler for additional detail
-    // act.sa_handler = my_sa_handler;
-    act.sa_flags = SA_SIGINFO;
-    act.sa_sigaction = (void (*)(int, siginfo_t *, void *))reactor_sigaction;
-
-    int ret = sigaction(signal, &act, NULL);
-    if(ret != 0) {
-        logger_log(d->logger, LOG_FATAL, "sigaction() failed '%s'", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-void reactor_deregister_signal( Reactor *d, int signal )
-{
-    // TODO
-    assert(0);
-}
-
-
-typedef struct SignalContext SignalContext;
-struct SignalContext
-{
-    // int signal;
-    void *context;
-    Reactor_callback callback;
-};
-
-
-static void reactor_on_signal_fifo_read_ready(SignalContext *sc, Event *e)
-{
-    switch(e->type) {
-        case READ_READY: {
-            SignalDetail s;
-            if(read(e->fd, &s, sizeof(SignalDetail)) == sizeof(SignalDetail))  {
-                // fprintf(stdout, "got signal %d\n", s.signal);
-                // call the inner function
-                // fill in the signal number for event and call the callback
-                e->signal = s.signal;
-                (sc->callback)(sc->context, e);
-            } else {
-                // something went wrong...
-                assert(0);
-            }
-            break;
-        }
-        case EXCEPTION:
-            // handle locally, instead of passing along...
-            logger_log(e->reactor->logger, LOG_FATAL, "exception on signal fifo '%s'", strerror(errno));
-            exit(EXIT_FAILURE);
-            break;
-        case TIMEOUT:
-        case CANCELLED:
-            (sc->callback)(sc->context, e);
-            break;
-        case WRITE_READY:
-            assert(0);
-    }
-
-    memset(sc, 0, sizeof(SignalContext));
-    free(sc);
-}
-
-
-void reactor_on_signal(Reactor *d, int timeout, void *context, Reactor_callback callback)
-{
-    SignalContext *sc = malloc(sizeof(SignalContext));
-    memset(sc, 0, sizeof(SignalContext));
-    // sc->signal = signal;
-    sc->context = context;
-    sc->callback = callback;
-    reactor_on_read_ready(
-        d,
-        d->signal_fifo_readfd,
-        timeout,
-        sc,
-        (void (*)(void *, Event *))reactor_on_signal_fifo_read_ready
-    );
 }
 

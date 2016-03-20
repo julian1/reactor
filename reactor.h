@@ -84,11 +84,12 @@ void reactor_on_write_ready(Reactor *d, int fd, int timeout, void *context, Reac
 
 // void reactor_rebind_handler(Event *e);
 
+/*
 // signal stuff
 void reactor_register_signal(Reactor *d, int signal);
 
 void reactor_deregister_signal(Reactor *d, int signal);
 
 void reactor_on_signal(Reactor *d, int timeout, void *context, Reactor_callback callback);
-
+*/
 
