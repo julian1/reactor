@@ -14,10 +14,8 @@
 
 #include <reactor.h>
 
-Reactor *r;
 
-
-static void signal_callback(void *context, SignalEvent *e)
+static void signal_callback(Reactor *r, SignalEvent *e)
 {
     switch(e->type) {
       case SIGNAL_SIGNAL: {
@@ -25,7 +23,7 @@ static void signal_callback(void *context, SignalEvent *e)
           fprintf(stdout, "got signal %d\n", e->siginfo.si_signo );
           if(count++ < 5) { 
               ///reactor_rebind_handler(e);
-              reactor_on_signal(r, -1, NULL, signal_callback);
+              reactor_on_signal(r, -1, r, (Signal_callback)signal_callback);
           } else {
             fprintf(stdout, "finishing\n");
           }
@@ -36,12 +34,13 @@ static void signal_callback(void *context, SignalEvent *e)
     }
 }
 
+
 int main()
 {
-    r = reactor_create();
+    Reactor *r = reactor_create();
     reactor_register_signal(r, 2 );  // SIGINT, ctrl-c
     reactor_register_signal(r, 20 ); // SIGTSTP, ctrl-z
-    reactor_on_signal(r, -1, NULL, signal_callback);
+    reactor_on_signal(r, -1, r, (Signal_callback)signal_callback);
     reactor_run(r);
     reactor_destroy(r);
 
