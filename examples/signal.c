@@ -12,9 +12,15 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <signal_.h>
+#include <ureactor.h>
+#include <signal_.h>   // weird problem here....
 
-Signal *d;
+// Signal *d;
+UReactor *r;
+
+/*
+  change name reactor to dumux, dispatch or core
+*/
 
 static void signal_callback(void *context, SignalEvent *e)
 {
@@ -24,7 +30,7 @@ static void signal_callback(void *context, SignalEvent *e)
           fprintf(stdout, "got signal %d\n", e->siginfo.si_signo );
           if(count++ < 5) { 
               ///reactor_rebind_handler(e);
-              signal_on_signal(d, -1, NULL, signal_callback);
+              ureactor_on_signal(r, -1, NULL, signal_callback);
           } else {
             fprintf(stdout, "finishing\n");
           }
@@ -37,16 +43,15 @@ static void signal_callback(void *context, SignalEvent *e)
 
 int main()
 {
-    Logger *l = logger_create(stdout, LOG_INFO);
-    Reactor *r = reactor_create(l);
-    d = signal_create(l, r);
+    r = ureactor_create();
 
-    signal_register_signal(d, 2 );  // SIGINT, ctrl-c
-    signal_register_signal(d, 20 ); // SIGTSTP, ctrl-z
-    signal_on_signal(d, -1, NULL, signal_callback);
+    ureactor_register_signal(r, 2 );  // SIGINT, ctrl-c
+    ureactor_register_signal(r, 20 ); // SIGTSTP, ctrl-z
+    ureactor_on_signal(r, -1, NULL, signal_callback);
+    // ureactor_on_signal(UReactor *, int timeout, void *context, Signal_callback callback);
 
-    reactor_run(r);
-    signal_destroy(d);
+    ureactor_run(r);
+    ureactor_destroy(r);
 
     return 0;
 }

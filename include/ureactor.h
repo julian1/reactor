@@ -1,6 +1,8 @@
 #pragma once
 
+#include <logger.h>
 #include <reactor.h>
+#include <signal_.h>
 
 // Fuck. The event type is a problem...
 
@@ -19,4 +21,7 @@ void ureactor_on_timer(UReactor *d, int timeout, void *context, Reactor_callback
 void ureactor_on_read_ready( UReactor *d, int fd, int timeout, void *context, Reactor_callback callback);
 void ureactor_on_write_ready(UReactor *d, int fd, int timeout, void *context, Reactor_callback callback);
 
+void ureactor_register_signal(UReactor *, int signal);
+void ureactor_deregister_signal(UReactor *, int signal);
+void ureactor_on_signal(UReactor *, int timeout, void *context, Signal_callback callback);
 
