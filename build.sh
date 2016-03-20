@@ -1,6 +1,6 @@
 #!/bin/bash -x
 
-rm logger.o reactor.o examples/*.out
+rm src/*.o examples/*.out
 
 for i in src/*.c; do
   gcc -Wall $i -c -I./include -o "${i%.c}.o" || exit
