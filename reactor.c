@@ -109,13 +109,8 @@ Reactor *reactor_create(Logger *logger)
 }
 
 
-Reactor *reactor_create_simple()
-{
-    Logger *logger = logger_create(stdout, LOG_INFO);
-    Reactor *reactor = reactor_create(logger);
-    return reactor;
-}
-j
+
+
 
 /*
 Reactor *reactor_create()

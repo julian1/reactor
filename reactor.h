@@ -2,6 +2,11 @@
 
 #include <logger.h>
 
+/*
+    who is responsible for destroying...
+    really needs to be another structure... 
+*/
+
 typedef struct Reactor Reactor;
 
 typedef enum {
@@ -58,8 +63,6 @@ typedef enum {
 
 Reactor *reactor_create(Logger *);
 
-Reactor *reactor_create_simple();
-
 void reactor_destroy(Reactor *);
 
 int reactor_run_once(Reactor *d);
@@ -68,15 +71,11 @@ void reactor_run(Reactor *d);
 
 void reactor_cancel_all(Reactor *d);
 
-// void reactor_log(Reactor *d, Reactor_log_level level, const char *format, ...);
-
 
 typedef struct Handler Handler;
 
 void reactor_cancel_handler(Handler *h);
 
-// events - should return the handler - to enable easy cancel?
-// 
 void reactor_on_timer(Reactor *d, int timeout, void *context, Reactor_callback callback);
 
 void reactor_on_read_ready( Reactor *d, int fd, int timeout, void *context, Reactor_callback callback);

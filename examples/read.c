@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include <reactor.h>
+#include <ureactor.h>
 
+// OK. we have a problem with the reactor context...
+// in the event.. is the inner context...
 
 static void on_read_ready(void *context, Event *e)
 {
@@ -39,11 +41,10 @@ static void on_read_ready(void *context, Event *e)
 int main()
 {
   int stdin_fd = 0;
-  Reactor *d = reactor_create_simple();
-  reactor_on_read_ready(d, stdin_fd, -1, NULL, (void *)on_read_ready);
-  // reactor_cancel_all(d);
-  reactor_run(d);
-  reactor_destroy(d);
+  UReactor *d = ureactor_create();
+  ureactor_on_read_ready(d, stdin_fd, -1, NULL, (void *)on_read_ready);
+  ureactor_run(d);
+  ureactor_destroy(d);
   return 0;
 }
 
