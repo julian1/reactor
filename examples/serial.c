@@ -1,5 +1,9 @@
 
 /*
+    Arduino, good defaults
+    stty -F /dev/ttyUSB0 cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+
+
     # ESP8266
     # Can use rlwrap for history!
     rlwrap ./examples/serial.out
@@ -108,49 +112,6 @@ static void on_read_stdin(Context *context, Event *e)
     }
 }
 
-// so stdin appears to be line buffered it would be nice to change
-// also handle signal...
-// it's buffering behavior not the blocking behavior
-
-
-static void set_modem_pin(int device_fd, int flag, bool pin)
-{
-    int argp;
-    ioctl(device_fd, TIOCMGET, &argp);
-    if(ioctl(device_fd, TIOCMGET, &argp) < 0) {
-        // fatal...
-        assert(0);
-    } else {
-        if(pin) {
-            // pull high, led on, clear dtr bit
-            argp &= ~ flag;
-            if(ioctl(device_fd, TIOCMSET, &argp) < 0) {
-                assert(0);
-            }
-        }
-        else {
-            // pull low, led off, set dtr bit
-            argp |= flag ;
-            if(ioctl(device_fd, TIOCMSET, &argp) < 0) {
-                assert(0);
-            }
-        }
-    }
-}
-
-/*
-static void on_timeout_1(Context *context, Event *e)
-{
-    // blink rts and dtr
-    static bool led_state = 0;  // move to context
-    led_state = !led_state;
-    // fprintf(stdout, "led state %d\n", led_state);
-    set_modem_pin(context->device_fd, TIOCM_DTR, led_state);
-    set_modem_pin(context->device_fd, TIOCM_RTS, !led_state);
-    reactor_on_timer(e->reactor, 500, context, (void *)on_timeout_1);
-}
-*/
-
 
 int main()
 {
@@ -166,9 +127,28 @@ int main()
         assert(0);
     }
 
-    // get data
+    // usleep(50000); // reveals that reset is a race
+
+    // ok, it looks like when we do a read, actually sets
+    // some hard defaults!. So all we need to do is not do a read
+    // before setting
+    // no it's still a race condition - but can improve with a cap
+    int serial = 0;
+    /* if(ioctl(context.device_fd, TIOCMGET, &serial) < 0) {
+        assert(0);
+    } */
+    serial = serial & ~TIOCM_DTR & ~TIOCM_RTS;
+    if(ioctl(context.device_fd, TIOCMSET, &serial) < 0) {
+        assert(0);
+    }
+
     struct termios options;
-    tcgetattr(context.device_fd, &options);
+
+    // reset config!
+    memset(&options, 0, sizeof(struct termios));
+
+    // get existing config
+    // tcgetattr(context.device_fd, &options);
 
     // set speed
     cfsetispeed(&options, B9600);
@@ -176,24 +156,17 @@ int main()
 
     // echo off, echo newline off, canonical mode off,
     // extended input processing off, signal chars off
-    options.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
-    
+    // options.c_lflag &= ~(ECHO | ECHONL | ICANON | IEXTEN | ISIG);
+
     // raw output
+    // cfmakeraw(&options);
     // options.c_oflag = 0;
 
-    // caconical - disable all echo, l- 
-    // options.c_lflag = ICANON ;
-
-    tcflush(context.device_fd, TCIFLUSH);   
+    tcflush(context.device_fd, TCIFLUSH);
     tcsetattr(context.device_fd, TCSANOW, &options);
 
-    set_modem_pin(context.device_fd, TIOCM_DTR, true); // gpio0, high = normal boot, low flash
-    set_modem_pin(context.device_fd, TIOCM_RTS, true); // reset, high don't reset
-
-    if(true) {
-        reactor_on_read_ready(context.reactor, context.device_fd, -1, &context, (void *)on_read_device);
-        reactor_on_read_ready(context.reactor, 0, -1, &context, (void *)on_read_stdin);
-    }
+    reactor_on_read_ready(context.reactor, context.device_fd, -1, &context, (void *)on_read_device);
+    reactor_on_read_ready(context.reactor, 0, -1, &context, (void *)on_read_stdin);
     // reactor_on_timer(d, 500, &context, (void *)on_timeout_1);
 
     // reactor_cancel_all(d);
