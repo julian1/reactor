@@ -1,38 +1,32 @@
-
 /*
+    # ESP8266
+
+    To fix echo (need to go in init.lua to persist over reboots)
+    uart.setup( 0, 9600, 8, 0, 1, 0)
+    // uart.setup(id, baud, databits, parity, stopbits, echo )
+
     Arduino, good defaults
     stty -F /dev/ttyUSB0 cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
 
 
-    # ESP8266
     # Can use rlwrap for history!
     rlwrap ./examples/serial.out
 
-    There's an issue, with device echoing the input.
-
     Ok, it's resetting when we connect - need to test ioctl get
-        - and not reset unless need.
-        -  or else require a de-bounce cap or something
-        - or we need to set hardware handshake off initially...
+        - else require a de-bounce cap or something
 
-    done - There's a problem that after use esptool, then baud is set wrong
-
-    - Note that in case stdin is associated  with  a  terminal,
-    This kernel input handling can be modified using calls like tcsetattr(3
-
+    TODO
     - Use signal handler to close.
     - maybe ctrl-z to reset?
+    - rename devcat /device cat...
 
-    refs
+    - done - There's a problem that after use esptool, then baud is set wrong
+
+    Refs
         http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux
         https://en.wikibooks.org/wiki/Serial_Programming/termios
         http://www.tldp.org/HOWTO/text/Serial-Programming-HOWTO
-
         http://unix.stackexchange.com/questions/117037/how-to-send-data-to-a-serial-port-and-see-any-answer
-
-    netcat devcat /device cat...
-
-    maybe sending too much data? or need to convert CR to LF
 */
 
 #include <stdio.h>
