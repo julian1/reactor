@@ -35,6 +35,10 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
+  - non-blocking dns resolution on a consumer thread.
+    - may be able to do with fifo queue similar to interupts. 
+    - http://discuss.joelonsoftware.com/default.asp?joel.3.475011.13
+    - getaddrinfo_a() is async
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
   - maybe rename to use lowercase underscore t
   - maybe support cancelling individual handlers (lookup by fd and type)
