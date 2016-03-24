@@ -145,8 +145,8 @@ int main()
     // tcgetattr(context.device_fd, &options);
 
     // set speed
-    cfsetispeed(&options, B9600);
-    cfsetospeed(&options, B9600);
+    cfsetispeed(&options, B115200);
+    cfsetospeed(&options, B115200);
 
     // echo off, echo newline off, canonical mode off,
     // extended input processing off, signal chars off
