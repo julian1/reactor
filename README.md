@@ -39,6 +39,11 @@
     - may be able to do with fifo queue similar to interupts. 
     - http://discuss.joelonsoftware.com/default.asp?joel.3.475011.13
     - getaddrinfo_a() is async
+    - http://stackoverflow.com/questions/22013421/non-blocking-network-address-resolution-gethostbyname-or-getaddrinfo
+
+    - pool.c - push job onto pool with context and callback. then write pipe, with callback handler. 
+    POSIX.1 says that write(2)s of less than PIPE_BUF bytes must be atomic: the output data is written to the pipe as a contiguous sequence. Writes of more than PIPE_BUF bytes may be nonatomic: the kernel may interleave the data with data written by other processes. POSIX.1 requires PIPE_BUF to be at least 512 bytes. (On Linux, PIPE_BUF is 4096 bytes.) 
+
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
   - maybe rename to use lowercase underscore t
   - maybe support cancelling individual handlers (lookup by fd and type)
