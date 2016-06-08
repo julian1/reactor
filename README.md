@@ -9,14 +9,14 @@
   - support for application user-contexts in the callback handler
   - specify timeout for any io action
   - synchronous management of signal interupts
-  - clean cancel/terminate semantics for easy cleanup of resources 
+  - clean cancel/terminate semantics for easy cleanup of resources
   - no hiding/abstracting ioctl(), tty_ioctl() etc
   - no queue lag for simpler lifetime management
 
 #### BUILD
 ```
   $ cd ~/reactor
-  $ ./build.sh 
+  $ ./build.sh
   $ ./examples/timeout.out
   ...
 ```
@@ -35,9 +35,39 @@
   - http://gngrwzrd.com/libgwrl/pod.html
 
 #### TODO
+<<<<<<< HEAD
   - non-blocking dns resolution on a consumer thread.
     - may be able to do with fifo queue similar to interupts. 
     - http://discuss.joelonsoftware.com/default.asp?joel.3.475011.13
+=======
+  - parser for config /etc/resolve?. just a simple closure. with regex. and or etc.
+
+  - handle a single queue - based on a pipe - inside
+      - handlers would have a predicate taking the messgae and returning
+          whether they can handle the message
+      - encode len, so that can always extract entire message, then pass to handler.
+      - handler then co-exists with timeout
+      - use for signals, - and would enable per signal handlers
+      - also thread pool
+
+    // No the way to do it, is to have another module entire.
+    //   with one reader, that dequeues the message, and always rebinds itself
+    //   and that maintains it's own handler set.
+    //   that it delegates to (perhaps with predicates).
+    //   this keeps it entirely out of the demux core.
+
+
+  - non-blocking dns resolution on a consumer thread.
+    - may be able to do with fifo queue similar to interupts.
+    - http://discuss.joelonsoftware.com/default.asp?joel.3.475011.13
+
+    - getaddrinfo_a() is async
+    - http://stackoverflow.com/questions/22013421/non-blocking-network-address-resolution-gethostbyname-or-getaddrinfo
+
+    - pool.c - push job onto pool with context and callback. then write pipe, with callback handler.
+    POSIX.1 says that write(2)s of less than PIPE_BUF bytes must be atomic: the output data is written to the pipe as a contiguous sequence. Writes of more than PIPE_BUF bytes may be nonatomic: the kernel may interleave the data with data written by other processes. POSIX.1 requires PIPE_BUF to be at least 512 bytes. (On Linux, PIPE_BUF is 4096 bytes.)
+
+>>>>>>> a41c7da07bae289eb65965f43332e0b6703a34a3
   - maybe rename Event to ReactorEvent or use reactor_event_t etc... becomes more complicated
   - maybe rename to use lowercase underscore t
   - maybe support cancelling individual handlers (lookup by fd and type)
@@ -47,8 +77,10 @@
   - fix device echo issue with serial comms
   - investigate - for proactor ioctl for sockets to discover number bytes in buffer already/yet to transmit. similar to boost asio
   - network examples
+    - websockets - would be really good. could then create a shell.
+    - postgres async connection
     - http
-    - dns
+    - dns async - server/forwarder and client
     - telnet socket bind/listen
   - better enum variable prefixes - eg. prefix with 'reactor'
 
