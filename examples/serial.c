@@ -1,32 +1,32 @@
 /*
-    # ESP8266
+    Example showing use of uart/serial port to communicate with esp8266 computer
 
-    To fix echo (need to go in init.lua to persist over reboots)
-    uart.setup( 0, 9600, 8, 0, 1, 0)
-    // uart.setup(id, baud, databits, parity, stopbits, echo )
+    Notes, 
+      To fix echo (need to go in init.lua to persist over reboots)
+      uart.setup( 0, 9600, 8, 0, 1, 0)
+      // uart.setup(id, baud, databits, parity, stopbits, echo )
 
-    Arduino, good defaults
-    stty -F /dev/ttyUSB0 cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+      Arduino, good defaults
+      stty -F /dev/ttyUSB0 cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
 
+      # Can use rlwrap for history!
+      rlwrap ./examples/serial.out
 
-    # Can use rlwrap for history!
-    rlwrap ./examples/serial.out
+      Ok, it's resetting when we connect - need to test ioctl get
+          - else require a de-bounce cap or something
 
-    Ok, it's resetting when we connect - need to test ioctl get
-        - else require a de-bounce cap or something
+      TODO
+      - Use signal handler to close.
+      - maybe ctrl-z to reset?
+      - rename devcat /device cat...
 
-    TODO
-    - Use signal handler to close.
-    - maybe ctrl-z to reset?
-    - rename devcat /device cat...
+      - done - There's a problem that after use esptool, then baud is set wrong
 
-    - done - There's a problem that after use esptool, then baud is set wrong
-
-    Refs
-        http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux
-        https://en.wikibooks.org/wiki/Serial_Programming/termios
-        http://www.tldp.org/HOWTO/text/Serial-Programming-HOWTO
-        http://unix.stackexchange.com/questions/117037/how-to-send-data-to-a-serial-port-and-see-any-answer
+      Refs
+          http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux
+          https://en.wikibooks.org/wiki/Serial_Programming/termios
+          http://www.tldp.org/HOWTO/text/Serial-Programming-HOWTO
+          http://unix.stackexchange.com/questions/117037/how-to-send-data-to-a-serial-port-and-see-any-answer
 */
 
 #include <stdio.h>

@@ -1,7 +1,8 @@
 /* 
-    A simple server, handling multiple parallel connections
-    http://www.linuxquestions.org/questions/linux-software-2/what-is-the-difference-in-using-o_nonblock-in-fcntl-and-sock_nonblock-in-socket-779678/
+    Example of a simple server, multiplexing multiple connections in parallel
+      http://www.linuxquestions.org/questions/linux-software-2/what-is-the-difference-in-using-o_nonblock-in-fcntl-and-sock_nonblock-in-socket-779678/
 */
+
 #include <stdio.h>
 //#include <sys/types.h> 
 //#include <sys/socket.h>
