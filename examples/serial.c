@@ -37,6 +37,7 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <stdbool.h> // c99
+#include <stdlib.h>
 
 #include <reactor.h>
 
@@ -133,7 +134,7 @@ int main()
     } */
     serial = serial & ~TIOCM_DTR & ~TIOCM_RTS;
     if(ioctl(context.device_fd, TIOCMSET, &serial) < 0) {
-        assert(0);
+        exit(123);
     }
 
     struct termios options;
