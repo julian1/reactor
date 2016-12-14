@@ -149,7 +149,7 @@ int main(int argc, char **argv)
         cfsetospeed(&options, B115200);
     } 
     else {
-        fprintf(stdout, "unknown speed\n");
+        fprintf(stdout, "unknown speed '%s'\n", speed ? speed : "");
         exit(123);
     } 
 
@@ -173,18 +173,15 @@ int main(int argc, char **argv)
         options.c_cflag |= CS7;
     }
     else {
-        fprintf(stdout, "unknown parity\n");
+        fprintf(stdout, "unknown parity '%s'\n", parity ? parity : "");
         exit(123);
     } 
 
     // device
     if(!filename) {
-        fprintf(stdout, "unknown device\n");
+        fprintf(stdout, "device not specified\n");
         exit(123);
     } 
-
-
-
 
 
 
