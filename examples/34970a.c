@@ -1,19 +1,18 @@
 /*
-    # ESP8266
+  TODO 
+    - make the speed and 8n1 a configuration option. to generalize...
+    - factor into separate project and use git submodule to build..       
+    - capture ctrl-c ? seems to work without it.
+    - add a timeout to disconnect...  
 
-    To fix echo (need to go in init.lua to persist over reboots)
-    uart.setup( 0, 9600, 8, 0, 1, 0)
-    // uart.setup(id, baud, databits, parity, stopbits, echo )
+  // perl script o format data from fetch eg. 4 columns.
+  perl -pe 's{,}{++$n % 4 ? $& : "\n"}ge' data.txt
 
-    Arduino, good defaults
-    stty -F /dev/ttyUSB0 cs8 9600 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts
+  eg.
+    echo '*idn?' | ./examples/34970a.out  
 
-
-    # Can use rlwrap for history!
-    rlwrap ./examples/serial.out
-
-    Ok, it's resetting when we connect - need to test ioctl get
-        - else require a de-bounce cap or something
+    # Use rlwrap for history!
+    rlwrap ./examples/34970a.out  
 
     TODO
     - Use signal handler to close.
@@ -22,11 +21,6 @@
 
     - done - There's a problem that after use esptool, then baud is set wrong
 
-    Refs
-        http://stackoverflow.com/questions/4968529/how-to-set-baud-rate-to-307200-on-linux
-        https://en.wikibooks.org/wiki/Serial_Programming/termios
-        http://www.tldp.org/HOWTO/text/Serial-Programming-HOWTO
-        http://unix.stackexchange.com/questions/117037/how-to-send-data-to-a-serial-port-and-see-any-answer
 */
 
 #include <stdio.h>
@@ -50,15 +44,13 @@ struct Context
 };
 
 
-// change name to to on_device_event()
-
 static void on_device_event(Context *context, Event *e)
 {
     assert(context->device_fd == e->fd);
 
     switch(e->type) {
         case WRITE_READY: {
-
+            // we don't get this with serial prompt?
             fprintf(stdout, "on write ready?\n");
             reactor_on_read_ready( context->reactor, e->fd, -1, context, (void *)on_device_event);
             break;
@@ -79,7 +71,7 @@ static void on_device_event(Context *context, Event *e)
         }
         // anything else
         default:
-            fprintf(stdout, "event unknown");
+            fprintf(stdout, "unknown event");
             close(e->fd);
             break;
     }
@@ -103,13 +95,13 @@ static void on_read_stdin(Context *context, Event *e)
         }
         // anything else
         default:
-            fprintf(stdout, "event unknown on fd %d", e->fd);
+            fprintf(stdout, "unknown event on fd %d", e->fd);
             break;
     }
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
     Context context;
     memset(&context, 0, sizeof(Context));
@@ -145,7 +137,7 @@ int main()
     }
     */
 
-
+    int i;
     struct termios options;
     // reset config!
     memset(&options, 0, sizeof(struct termios));
@@ -153,9 +145,29 @@ int main()
     // get existing config
     // tcgetattr(context.device_fd, &options);
 
-    // set speed
-    cfsetispeed(&options, B57600 );
-    cfsetospeed(&options, B57600);
+    for(i = 0; i < argc; ++i) {
+
+        char *key = argv[i];
+
+        // set speed
+        if(strcmp(key, "-s") == 0) {
+            char *val = argv[i + 1];
+ 
+            if(strcmp(val, "57600") == 0) {
+                fprintf(stdout, "speed to 57600");
+                cfsetispeed(&options, B57600 );
+                cfsetospeed(&options, B57600);
+            } 
+            else if(strcmp(val, "115200") == 0) {
+                cfsetispeed(&options, B115200);
+                cfsetospeed(&options, B115200);
+            } 
+            else {
+                fprintf(stdout, "unknown speed");
+                exit(123);
+            } 
+        }
+    }
 
     /*
     https://www.cmrr.umn.edu/~strupp/serial.html
