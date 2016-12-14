@@ -90,7 +90,7 @@ static void on_read_stdin(Context *context, Event *e)
             // also eof for disconnect if socket, but not always - eg. fill
             char buf[1001];
             int n = read(e->fd, &buf, 1000);
-            fprintf(stdout, "Got %d chars from stdin\n", n);
+            // fprintf(stdout, "Got %d chars from stdin\n", n);
             if(n > 0) {
                 write(context->device_fd, &buf, n);
                 reactor_on_read_ready(context->reactor, e->fd, -1, context, (void *)on_read_stdin);
@@ -158,11 +158,19 @@ int main(int argc, char **argv)
         /*
         https://www.cmrr.umn.edu/~strupp/serial.html
          No parity (8N1):
+        default
         */
         options.c_cflag &= ~PARENB;
         options.c_cflag &= ~CSTOPB;
         options.c_cflag &= ~CSIZE;
         options.c_cflag |= CS8;
+    } 
+    else if(parity && strcmp(parity, "7e1") == 0) {
+        options.c_cflag |= PARENB;
+        options.c_cflag &= ~PARODD;
+        options.c_cflag &= ~CSTOPB;
+        options.c_cflag &= ~CSIZE;
+        options.c_cflag |= CS7;
     }
     else {
         fprintf(stdout, "unknown parity\n");
