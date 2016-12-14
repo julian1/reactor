@@ -133,32 +133,38 @@ int main(int argc, char **argv)
 
     context.reactor = reactor_create();
 
-
+    char **arg;
     const char *filename = NULL;
     const char *speed = NULL;
     const char *parity = NULL;
-    int i;
+    //int i;
     struct termios options;
+
+    // decode arguments and values,
+    for(arg = argv; arg < argv + argc; ++arg) {
+
+        if(**arg == '-' && arg >= argv + (argc - 1) ) {
+            fprintf(stdout, "flag '%s' missing argument\n", *arg);
+            exit(123);
+        }
+
+        if(strcmp(*arg, "-s") == 0) 
+            speed = *++arg;
+
+        else if(strcmp(*arg, "-d") == 0) 
+            filename = *++arg;
+
+        else if(strcmp(*arg, "-p") == 0)
+            parity = *++arg;
+    }
+
+
+
     // reset config!
     memset(&options, 0, sizeof(struct termios));
 
     // get existing config
     // tcgetattr(context.device_fd, &options);
-
-    for(i = 0; i < argc; ++i) {
-
-        char *key = argv[i];
-      
-        // TODO check i + 1 < argc
-        // set speed
-        if(strcmp(key, "-s") == 0) 
-            speed = argv[i + 1];
-        else if(strcmp(key, "-d") == 0) 
-            filename = argv[i + 1];
-        else if(strcmp(key, "-p") == 0)
-            parity = argv[i + 1];
-    }
-
 
     // speed
     if(speed && strcmp(speed, "57600") == 0) {
