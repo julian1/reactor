@@ -1,4 +1,6 @@
 /*
+    Example of posix signal handling
+
     handling signals
     - signals are hard. they may lag due to fifo queuing, and this presents
       synchronisation issues with handler invocation, cancelling, and rebinding, as well

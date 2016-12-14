@@ -1,5 +1,6 @@
-
-// testing reading stdin
+/*
+    Example showing use of events for reading stdin - everytime something is typed
+*/
 
 #include <stdio.h>
 #include <unistd.h>

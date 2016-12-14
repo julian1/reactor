@@ -1,5 +1,5 @@
 
-// timer callbacks
+// Example showing use of two system timers
 
 #include <stdio.h>
 
