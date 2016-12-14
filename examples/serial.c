@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     // decode arguments and values,
     for(arg = argv; arg < argv + argc; ++arg) {
 
-        if(**arg == '-' && arg >= argv + (argc - 1) ) {
+        if(**arg == '-' && arg + 1 >= argv + argc) {
             fprintf(stdout, "flag '%s' missing argument\n", *arg);
             exit(123);
         }
