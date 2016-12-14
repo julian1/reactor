@@ -1,4 +1,8 @@
 /*
+
+  Bus pirate
+    ./examples/34970a.out -d /dev/ttyUSB0 -s 115200 -p 8n1
+
   TODO 
     - make the speed and 8n1 a configuration option. to generalize...
     - factor into separate project and use git submodule to build..       
@@ -109,34 +113,9 @@ int main(int argc, char **argv)
     context.reactor = reactor_create();
 
 
-    const char *filename = "/dev/ttyUSB0";
-    fprintf(stdout, "opening %s\n", filename);
-
-    context.device_fd = open(filename, O_RDWR | O_NONBLOCK);
-    if(context.device_fd <= 0) {
-        fprintf(stdout, "error opening %d\n", context.device_fd);
-        exit(123);
-    }
-
-    fprintf(stdout, "fd is %d\n", context.device_fd);
-
-    // usleep(50000); // reveals that reset is a race
-
-    // ok, it looks like when we do a read, actually sets
-    // some hard defaults!. So all we need to do is not do a read
-    // before setting
-    // no it's still a race condition - but can improve with a cap
-    // int serial = 0;
-    /* if(ioctl(context.device_fd, TIOCMGET, &serial) < 0) {
-        assert(0);
-    } */
-    /*
-    serial = serial & ~TIOCM_DTR & ~TIOCM_RTS;
-    if(ioctl(context.device_fd, TIOCMSET, &serial) < 0) {
-        assert(0);
-    }
-    */
-
+    const char *filename = NULL;
+    const char *speed = NULL;
+    const char *parity = NULL;
     int i;
     struct termios options;
     // reset config!
@@ -148,35 +127,79 @@ int main(int argc, char **argv)
     for(i = 0; i < argc; ++i) {
 
         char *key = argv[i];
-
+      
+        // TODO check i + 1 < argc
         // set speed
-        if(strcmp(key, "-s") == 0) {
-            char *val = argv[i + 1];
- 
-            if(strcmp(val, "57600") == 0) {
-                fprintf(stdout, "speed to 57600");
-                cfsetispeed(&options, B57600 );
-                cfsetospeed(&options, B57600);
-            } 
-            else if(strcmp(val, "115200") == 0) {
-                cfsetispeed(&options, B115200);
-                cfsetospeed(&options, B115200);
-            } 
-            else {
-                fprintf(stdout, "unknown speed");
-                exit(123);
-            } 
-        }
+        if(strcmp(key, "-s") == 0) 
+            speed = argv[i + 1];
+        else if(strcmp(key, "-d") == 0) 
+            filename = argv[i + 1];
+        else if(strcmp(key, "-p") == 0)
+            parity = argv[i + 1];
     }
 
+
+    // speed
+    if(speed && strcmp(speed, "57600") == 0) {
+        cfsetispeed(&options, B57600 );
+        cfsetospeed(&options, B57600);
+    } 
+    else if(speed && strcmp(speed, "115200") == 0) {
+        cfsetispeed(&options, B115200);
+        cfsetospeed(&options, B115200);
+    } 
+    else {
+        fprintf(stdout, "unknown speed\n");
+        exit(123);
+    } 
+
+    // parity
+    if(parity && strcmp(parity, "8n1") == 0) {
+        /*
+        https://www.cmrr.umn.edu/~strupp/serial.html
+         No parity (8N1):
+        */
+        options.c_cflag &= ~PARENB;
+        options.c_cflag &= ~CSTOPB;
+        options.c_cflag &= ~CSIZE;
+        options.c_cflag |= CS8;
+    }
+    else {
+        fprintf(stdout, "unknown parity\n");
+        exit(123);
+    } 
+
+    // device
+    if(!filename) {
+        fprintf(stdout, "unknown device\n");
+        exit(123);
+    } 
+
+
+
+
+
+
+    fprintf(stdout, "opening %s\n", filename);
+
+    context.device_fd = open(filename, O_RDWR | O_NONBLOCK);
+    if(context.device_fd <= 0) {
+        // TODO errno
+        fprintf(stdout, "error opening %d\n", context.device_fd);
+        exit(123);
+    }
+
+    fprintf(stdout, "fd is %d\n", context.device_fd);
+
+    // usleep(50000); // reveals that reset is a race
+
     /*
-    https://www.cmrr.umn.edu/~strupp/serial.html
-     No parity (8N1):
+      // turning pin on or off
+    serial = serial & ~TIOCM_DTR & ~TIOCM_RTS;
+    if(ioctl(context.device_fd, TIOCMSET, &serial) < 0) {
+        assert(0);
+    }
     */
-    options.c_cflag &= ~PARENB;
-    options.c_cflag &= ~CSTOPB;
-    options.c_cflag &= ~CSIZE;
-    options.c_cflag |= CS8;
 
     // echo off, echo newline off, canonical mode off,
     // extended input processing off, signal chars off
